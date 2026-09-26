@@ -15,9 +15,13 @@ import java.util.concurrent.TimeUnit
 object JwUrls {
     const val BASE = "https://jw.xmu.edu.cn"
 
-    /** CAS 登录入口（service 指向教务系统；URL 形态取自厦大现有客户端实测在用的拼接） */
-    const val CAS_LOGIN =
-        "https://ids.xmu.edu.cn/authserver/login?type=userNameLogin&service=https://jw.xmu.edu.cn/login?service=https://jw.xmu.edu.cn/new/index.html"
+    /**
+     * 登录入口：直接访问教务自己的 /login，由它 302 到统一身份认证
+     * （service=规范编码的 https://jw.xmu.edu.cn/login）。
+     * 这样 CAS 签发的票据与教务校验用的 service 严格一致，登录后才会种下 SAAS_U 会话 cookie。
+     * 注意：不要自拼嵌套 service 的 CAS 链接——票据校验会因 service 不匹配而失败。
+     */
+    const val CAS_LOGIN = "https://jw.xmu.edu.cn/login"
 
     const val XSKCB = "/jwapp/sys/wdkb/modules/xskcb/xskcb.do"
     const val XNXQDM = "/jwapp/sys/wdkb/modules/xskcb/xnxqdm.do"
@@ -62,7 +66,14 @@ class JwClient(private val context: Context) {
         postForm(JwUrls.XSKCB, "{}").use { resp ->
             val text = resp.body?.string().orEmpty().trimStart()
             val valid = text.startsWith("{")
-            AppLog.event(context, "jw", "isSessionValid -> $valid (body 首 20 字符: ${text.take(20).replace('\n', ' ')})")
+            val cookieNames = CookieManager.getInstance()
+                .getCookie(JwUrls.BASE)?.split(';')
+                ?.map { it.trim().substringBefore('=') }
+                .orEmpty()
+            AppLog.event(
+                context, "jw",
+                "isSessionValid -> $valid (body 首 20 字符: ${text.take(20).replace('\n', ' ')}) cookies=${cookieNames.joinToString(",")}",
+            )
             valid
         }
     } catch (e: Exception) {
