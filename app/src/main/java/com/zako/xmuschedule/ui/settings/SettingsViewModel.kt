@@ -1,12 +1,11 @@
 package com.zako.xmuschedule.ui.settings
 
-import android.app.Application
 import android.app.AlarmManager
+import android.app.Application
 import android.content.Context
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.zako.xmuschedule.XmuScheduleApp
 import com.zako.xmuschedule.data.Prefs
 import com.zako.xmuschedule.data.ScheduleRepository
 import com.zako.xmuschedule.data.db.AppDatabase
@@ -29,7 +28,7 @@ data class SettingsUiState(
     val periods: List<PeriodTimeEntity> = emptyList(),
 )
 
-class SettingsViewModel(app: XmuScheduleApp) : AndroidViewModel(app) {
+class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val db = AppDatabase.get(app)
     private val repo = ScheduleRepository(app)

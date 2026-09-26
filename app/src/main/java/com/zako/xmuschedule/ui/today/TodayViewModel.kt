@@ -1,8 +1,8 @@
 package com.zako.xmuschedule.ui.today
 
+import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.zako.xmuschedule.XmuScheduleApp
 import com.zako.xmuschedule.data.ScheduleRepository
 import com.zako.xmuschedule.data.db.AppDatabase
 import com.zako.xmuschedule.data.db.CourseEntity
@@ -37,7 +37,7 @@ data class TodayUiState(
     val items: List<TodayItem> = emptyList(),
 )
 
-class TodayViewModel(app: XmuScheduleApp) : AndroidViewModel(app) {
+class TodayViewModel(app: Application) : AndroidViewModel(app) {
 
     private val db = AppDatabase.get(app)
     private val repo = ScheduleRepository(app)

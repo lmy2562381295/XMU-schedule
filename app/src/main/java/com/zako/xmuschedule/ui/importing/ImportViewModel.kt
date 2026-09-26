@@ -3,7 +3,6 @@ package com.zako.xmuschedule.ui.importing
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.zako.xmuschedule.XmuScheduleApp
 import com.zako.xmuschedule.data.ImportResult
 import com.zako.xmuschedule.data.ScheduleRepository
 import com.zako.xmuschedule.data.remote.JwClient
@@ -23,7 +22,7 @@ sealed interface ImportUiState {
     data class Error(val message: String) : ImportUiState
 }
 
-class ImportViewModel(app: XmuScheduleApp) : AndroidViewModel(app) {
+class ImportViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = ScheduleRepository(app)
     private var pendingCode: String? = null

@@ -1,8 +1,8 @@
 package com.zako.xmuschedule.ui.week
 
+import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.zako.xmuschedule.XmuScheduleApp
 import com.zako.xmuschedule.data.ScheduleRepository
 import com.zako.xmuschedule.data.db.AppDatabase
 import com.zako.xmuschedule.data.db.CourseEntity
@@ -34,7 +34,7 @@ data class WeekUiState(
     val occupied: Set<Pair<Int, Int>> = emptySet(),
 )
 
-class WeekViewModel(app: XmuScheduleApp) : AndroidViewModel(app) {
+class WeekViewModel(app: Application) : AndroidViewModel(app) {
 
     private val db = AppDatabase.get(app)
     private val repo = ScheduleRepository(app)
