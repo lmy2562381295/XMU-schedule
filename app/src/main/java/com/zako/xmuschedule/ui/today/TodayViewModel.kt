@@ -9,6 +9,7 @@ import com.zako.xmuschedule.data.db.CourseEntity
 import com.zako.xmuschedule.data.db.TermConfigEntity
 import com.zako.xmuschedule.data.db.weekNumbers
 import com.zako.xmuschedule.reminder.ReminderScheduler
+import com.zako.xmuschedule.util.AppLog
 import com.zako.xmuschedule.util.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -90,9 +91,15 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
 
     fun loadDemo() {
         viewModelScope.launch(Dispatchers.IO) {
-            AppDatabase.ensureDefaultPeriods(getApplication())
-            repo.importDemo()
-            ReminderScheduler.scheduleWindow(getApplication())
+            try {
+                AppLog.event(getApplication(), "today", "loadDemo 开始")
+                AppDatabase.ensureDefaultPeriods(getApplication())
+                repo.importDemo()
+                ReminderScheduler.scheduleWindow(getApplication())
+                AppLog.event(getApplication(), "today", "loadDemo 完成")
+            } catch (t: Throwable) {
+                AppLog.error(getApplication(), "today", t)
+            }
         }
     }
 }

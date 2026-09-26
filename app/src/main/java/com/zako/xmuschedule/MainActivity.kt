@@ -19,7 +19,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        lifecycleScope.launch { AppDatabase.ensureDefaultPeriods(this@MainActivity) }
+        lifecycleScope.launch {
+            try {
+                AppDatabase.ensureDefaultPeriods(this@MainActivity)
+            } catch (t: Throwable) {
+                android.util.Log.e("xmu-schedule", "init failed", t)
+            }
+        }
         requestNotificationPermissionIfNeeded()
         setContent {
             XmuScheduleTheme {

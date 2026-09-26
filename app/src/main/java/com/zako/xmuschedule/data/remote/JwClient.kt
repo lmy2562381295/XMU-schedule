@@ -1,6 +1,8 @@
 package com.zako.xmuschedule.data.remote
 
+import android.content.Context
 import android.webkit.CookieManager
+import com.zako.xmuschedule.util.AppLog
 import okhttp3.FormBody
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -25,7 +27,7 @@ object JwUrls {
  * 教务系统 HTTP 客户端。
  * 登录会话由 WebView 的 CookieManager 持有；这里每次请求把该域 cookie 附加到请求头。
  */
-class JwClient {
+class JwClient(private val context: Context) {
 
     private val http: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -59,9 +61,12 @@ class JwClient {
     fun isSessionValid(): Boolean = try {
         postForm(JwUrls.XSKCB, "{}").use { resp ->
             val text = resp.body?.string().orEmpty().trimStart()
-            text.startsWith("{")
+            val valid = text.startsWith("{")
+            AppLog.event(context, "jw", "isSessionValid -> $valid (body 首 20 字符: ${text.take(20).replace('\n', ' ')})")
+            valid
         }
     } catch (e: Exception) {
+        AppLog.error(context, "jw", e)
         false
     }
 
@@ -71,9 +76,12 @@ class JwClient {
      */
     fun fetchSemesterCode(yearHint: String): String? = try {
         postForm(JwUrls.XNXQDM, """{"XN":"$yearHint"}""").use { resp ->
-            extractSemesterCode(resp.body?.string().orEmpty(), yearHint)
+            val code = extractSemesterCode(resp.body?.string().orEmpty(), yearHint)
+            AppLog.event(context, "jw", "fetchSemesterCode -> $code")
+            code
         }
     } catch (e: Exception) {
+        AppLog.error(context, "jw", e)
         null
     }
 
@@ -99,6 +107,7 @@ class JwClient {
         runCatching {
             postForm(JwUrls.XSKCB, requestJson ?: "{}").use { resp ->
                 val text = resp.body?.string().orEmpty()
+                AppLog.event(context, "jw", "schedule 表单形态: len=${text.length} hasData=${hasScheduleData(text)} 首20=${text.take(20).replace('\n', ' ')}")
                 if (hasScheduleData(text)) return text
                 if (!text.trimStart().startsWith("{")) return null // 疑似被重定向到登录页
                 lastJson = text
@@ -108,6 +117,7 @@ class JwClient {
         runCatching {
             postRaw(JwUrls.XSKCB, requestJson ?: "{}").use { resp ->
                 val text = resp.body?.string().orEmpty()
+                AppLog.event(context, "jw", "schedule JSON形态: len=${text.length} hasData=${hasScheduleData(text)}")
                 if (hasScheduleData(text)) return text
                 if (text.trimStart().startsWith("{")) lastJson = text
             }

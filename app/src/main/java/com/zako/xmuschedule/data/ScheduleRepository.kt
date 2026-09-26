@@ -6,6 +6,7 @@ import com.zako.xmuschedule.data.db.CourseEntity
 import com.zako.xmuschedule.data.db.TermConfigEntity
 import com.zako.xmuschedule.data.remote.JwClient
 import com.zako.xmuschedule.data.remote.JwScheduleParser
+import com.zako.xmuschedule.util.AppLog
 import com.zako.xmuschedule.util.TimeUtils
 import com.zako.xmuschedule.util.WeeksParser
 import kotlinx.coroutines.Dispatchers
@@ -28,13 +29,16 @@ class ScheduleRepository(private val context: Context) {
             val code = semesterCodeInput?.takeIf { it.isNotBlank() }
                 ?: client.fetchSemesterCode(TimeUtils.guessSemesterCode().substringBefore('-'))
                 ?: TimeUtils.guessSemesterCode()
+            AppLog.event(context, "repo", "importFromJw: 学期代码=$code (输入=${semesterCodeInput ?: "自动"})")
 
             val raw = client.fetchScheduleRaw(code)
                 ?: return@withContext ImportResult.Failure(
                     "未能获取课表数据：会话可能已过期，请重新登录；若持续失败请检查学期代码（当前：$code）"
                 )
+            AppLog.event(context, "repo", "原始返回长度=${raw.length}")
 
             val parsed = JwScheduleParser.parse(raw)
+            AppLog.event(context, "repo", "解析结果: 课程=${parsed.courses.size} 未识别=${parsed.unrecognized.size}")
             saveRawDump(raw, code)
 
             if (parsed.courses.isEmpty()) {
@@ -43,6 +47,7 @@ class ScheduleRepository(private val context: Context) {
                 )
             }
             replaceAll(parsed, code)
+            AppLog.event(context, "repo", "已写入数据库: ${parsed.courses.size} 条")
             ImportResult.Success(parsed.courses.size, parsed.unrecognized.size, code)
         }
 

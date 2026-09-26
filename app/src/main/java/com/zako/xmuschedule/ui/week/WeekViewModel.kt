@@ -10,6 +10,7 @@ import com.zako.xmuschedule.data.db.PeriodTimeEntity
 import com.zako.xmuschedule.data.db.TermConfigEntity
 import com.zako.xmuschedule.data.db.weekNumbers
 import com.zako.xmuschedule.reminder.ReminderScheduler
+import com.zako.xmuschedule.util.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -97,15 +98,23 @@ class WeekViewModel(app: Application) : AndroidViewModel(app) {
 
     fun saveCourse(course: CourseEntity) {
         viewModelScope.launch(Dispatchers.IO) {
-            repo.saveCourse(course)
-            ReminderScheduler.scheduleWindow(getApplication())
+            try {
+                repo.saveCourse(course)
+                ReminderScheduler.scheduleWindow(getApplication())
+            } catch (t: Throwable) {
+                AppLog.error(getApplication(), "week", t)
+            }
         }
     }
 
     fun deleteCourse(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            repo.deleteCourse(id)
-            ReminderScheduler.scheduleWindow(getApplication())
+            try {
+                repo.deleteCourse(id)
+                ReminderScheduler.scheduleWindow(getApplication())
+            } catch (t: Throwable) {
+                AppLog.error(getApplication(), "week", t)
+            }
         }
     }
 }

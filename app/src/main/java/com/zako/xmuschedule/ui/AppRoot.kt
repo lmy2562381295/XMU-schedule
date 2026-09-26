@@ -60,18 +60,19 @@ fun AppRoot() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: Routes.TODAY
 
-    // 上次运行如有未捕获崩溃，弹出报告供复制反馈
+    // 上次运行如有未捕获崩溃或异常记录，弹出报告供复制反馈
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     var crashText by remember { mutableStateOf(CrashReport.read(context)) }
     if (crashText != null) {
         AlertDialog(
             onDismissRequest = {},
-            title = { Text("上次运行崩溃报告") },
+            title = { Text("上次运行报告") },
             text = {
                 SelectionContainer {
                     Text(
-                        text = crashText!!.take(4000),
+                        text = (crashText!!.ifBlank { "（无堆栈）" } + "\n\n--- 运行日志 ---\n" +
+                            com.zako.xmuschedule.util.AppLog.read(context)).take(4000),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.height(280.dp).verticalScroll(rememberScrollState()),
                     )
@@ -81,7 +82,11 @@ fun AppRoot() {
                 TextButton(onClick = { clipboard.setText(AnnotatedString(crashText ?: "")) }) { Text("复制") }
             },
             dismissButton = {
-                TextButton(onClick = { CrashReport.clear(context); crashText = null }) { Text("忽略") }
+                TextButton(onClick = {
+                    CrashReport.clear(context)
+                    com.zako.xmuschedule.util.AppLog.clear(context)
+                    crashText = null
+                }) { Text("忽略") }
             },
         )
     }

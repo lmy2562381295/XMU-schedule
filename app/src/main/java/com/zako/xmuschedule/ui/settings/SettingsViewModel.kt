@@ -14,6 +14,7 @@ import com.zako.xmuschedule.data.db.TermConfigEntity
 import com.zako.xmuschedule.data.db.defaultPeriodTimes
 import com.zako.xmuschedule.reminder.Notifications
 import com.zako.xmuschedule.reminder.ReminderScheduler
+import com.zako.xmuschedule.util.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -49,53 +50,85 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setFirstWeekMonday(epochDay: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            val config = db.termConfigDao().now() ?: TermConfigEntity()
-            db.termConfigDao().upsert(config.copy(firstWeekMondayEpochDay = epochDay))
-            ReminderScheduler.scheduleWindow(getApplication())
+            try {
+                val config = db.termConfigDao().now() ?: TermConfigEntity()
+                db.termConfigDao().upsert(config.copy(firstWeekMondayEpochDay = epochDay))
+                ReminderScheduler.scheduleWindow(getApplication())
+                AppLog.event(getApplication(), "settings", "第一周设为 epochDay=$epochDay")
+            } catch (t: Throwable) {
+                AppLog.error(getApplication(), "settings", t)
+            }
         }
     }
 
     fun changeTotalWeeks(delta: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            val config = db.termConfigDao().now() ?: TermConfigEntity()
-            val next = (config.totalWeeks + delta).coerceIn(4, 30)
-            db.termConfigDao().upsert(config.copy(totalWeeks = next))
-            ReminderScheduler.scheduleWindow(getApplication())
+            try {
+                val config = db.termConfigDao().now() ?: TermConfigEntity()
+                val next = (config.totalWeeks + delta).coerceIn(4, 30)
+                db.termConfigDao().upsert(config.copy(totalWeeks = next))
+                ReminderScheduler.scheduleWindow(getApplication())
+            } catch (t: Throwable) {
+                AppLog.error(getApplication(), "settings", t)
+            }
         }
     }
 
     fun setLeadMinutes(minutes: Int) {
         Prefs.setLeadMinutes(getApplication(), minutes)
-        viewModelScope.launch(Dispatchers.IO) { ReminderScheduler.scheduleWindow(getApplication()) }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                ReminderScheduler.scheduleWindow(getApplication())
+            } catch (t: Throwable) {
+                AppLog.error(getApplication(), "settings", t)
+            }
+        }
     }
 
     fun updatePeriod(section: Int, start: String, end: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            db.periodTimeDao().upsertAll(listOf(PeriodTimeEntity(section, start, end)))
-            ReminderScheduler.scheduleWindow(getApplication())
+            try {
+                db.periodTimeDao().upsertAll(listOf(PeriodTimeEntity(section, start, end)))
+                ReminderScheduler.scheduleWindow(getApplication())
+            } catch (t: Throwable) {
+                AppLog.error(getApplication(), "settings", t)
+            }
         }
     }
 
     fun resetPeriods() {
         viewModelScope.launch(Dispatchers.IO) {
-            db.periodTimeDao().clear()
-            db.periodTimeDao().upsertAll(defaultPeriodTimes())
-            ReminderScheduler.scheduleWindow(getApplication())
+            try {
+                db.periodTimeDao().clear()
+                db.periodTimeDao().upsertAll(defaultPeriodTimes())
+                ReminderScheduler.scheduleWindow(getApplication())
+            } catch (t: Throwable) {
+                AppLog.error(getApplication(), "settings", t)
+            }
         }
     }
 
     fun loadDemo() {
         viewModelScope.launch(Dispatchers.IO) {
-            AppDatabase.ensureDefaultPeriods(getApplication())
-            repo.importDemo()
-            ReminderScheduler.scheduleWindow(getApplication())
+            try {
+                AppDatabase.ensureDefaultPeriods(getApplication())
+                repo.importDemo()
+                ReminderScheduler.scheduleWindow(getApplication())
+                AppLog.event(getApplication(), "settings", "载入演示课表完成")
+            } catch (t: Throwable) {
+                AppLog.error(getApplication(), "settings", t)
+            }
         }
     }
 
     fun clearAll() {
         viewModelScope.launch(Dispatchers.IO) {
-            repo.clearAll()
-            ReminderScheduler.scheduleWindow(getApplication())
+            try {
+                repo.clearAll()
+                ReminderScheduler.scheduleWindow(getApplication())
+            } catch (t: Throwable) {
+                AppLog.error(getApplication(), "settings", t)
+            }
         }
     }
 
