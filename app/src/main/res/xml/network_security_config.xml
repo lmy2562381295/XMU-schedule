@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  教务系统登录后的跳转被服务器端写成 http://jw.xmu.edu.cn/index.html（明文），
+  WebView 默认禁止明文流量会导致 ERR_CLEARTEXT_NOT_PERMITTED。
+  这里仅对 jw.xmu.edu.cn 放行明文 HTTP，其余域仍强制 HTTPS。
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">jw.xmu.edu.cn</domain>
+    </domain-config>
+</network-security-config>

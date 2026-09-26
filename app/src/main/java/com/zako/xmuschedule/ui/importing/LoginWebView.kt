@@ -63,6 +63,17 @@ fun LoginWebView(onSuccess: () -> Unit) {
                         check(url)
                     }
 
+                    override fun onReceivedError(
+                        view: WebView,
+                        request: android.webkit.WebResourceRequest,
+                        error: android.webkit.WebResourceError,
+                    ) {
+                        AppLog.event(
+                            appContext, "webview",
+                            "加载失败: ${request.url} ${error.description}",
+                        )
+                    }
+
                     override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
                         check(url)
                     }
