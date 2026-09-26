@@ -16,12 +16,15 @@ object JwUrls {
     const val BASE = "https://jw.xmu.edu.cn"
 
     /**
-     * 登录入口：直接访问教务自己的 /login，由它 302 到统一身份认证
-     * （service=规范编码的 https://jw.xmu.edu.cn/login）。
-     * 这样 CAS 签发的票据与教务校验用的 service 严格一致，登录后才会种下 SAAS_U 会话 cookie。
-     * 注意：不要自拼嵌套 service 的 CAS 链接——票据校验会因 service 不匹配而失败。
+     * 应用入口（参考实现验证过的标准成绩应用）。appShow 的 SSO 链会种下 jwapp 所需的
+     * SAAS_U 会话 cookie。登录入口的 service 参数用它并整体 URL 编码。
      */
-    const val CAS_LOGIN = "https://jw.xmu.edu.cn/login"
+    const val START_URL = "$BASE/appShow?appId=4768574631264620"
+
+    /** CAS 登录入口：service=整体编码后的应用入口（与参考实现一致，勿改用手拼嵌套 service） */
+    val CAS_LOGIN: String =
+        "https://ids.xmu.edu.cn/authserver/login?type=userNameLogin&service=" +
+            android.net.Uri.encode(START_URL, "")
 
     const val XSKCB = "/jwapp/sys/wdkb/modules/xskcb/xskcb.do"
     const val XNXQDM = "/jwapp/sys/wdkb/modules/xskcb/xnxqdm.do"

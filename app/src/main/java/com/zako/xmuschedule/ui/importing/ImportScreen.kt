@@ -1,6 +1,7 @@
 package com.zako.xmuschedule.ui.importing
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,89 +50,100 @@ fun ImportScreen(onClose: () -> Unit) {
             Text("从教务系统导入课表", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
 
-        when (val s = state) {
-            is ImportUiState.NeedLogin -> {
-                Text(
-                    s.hint,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-                Text(
-                    "登录完成后会自动跳回本页并导入，无需其他操作。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
+        // 登录与页面内导入阶段：WebView 保持挂载
+        val inWebFlow = state is ImportUiState.NeedLogin || state is ImportUiState.WebImporting
+        if (inWebFlow) {
+            Text(
+                "登录完成后会自动取数并导入，无需其他操作。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            Box(Modifier.fillMaxSize()) {
                 LoginWebView(
-                    onSuccess = viewModel::onLoginSuccess,
-                    onPortalLanded = viewModel::onPortalLanded,
+                    onReady = viewModel::onWebReady,
+                    onAttach = viewModel::attachWebView,
+                    onDetach = viewModel::detachWebView,
                 )
-            }
-
-            ImportUiState.Loading -> Column(
-                Modifier.fillMaxSize().padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                CircularProgressIndicator()
-                Spacer(Modifier.height(12.dp))
-                Text("正在拉取课表数据…")
-            }
-
-            is ImportUiState.Done -> Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("导入成功", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("共导入 ${s.count} 条课程安排（学期：${s.semester}）", style = MaterialTheme.typography.bodyMedium)
-                        if (s.unrecognized > 0) {
-                            Text("有 ${s.unrecognized} 条记录未能识别，可点击下方按钮查看原文。", style = MaterialTheme.typography.bodySmall)
+                if (state is ImportUiState.WebImporting) {
+                    Card(
+                        modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    ) {
+                        Column(
+                            Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            CircularProgressIndicator()
+                            Text("正在从教务系统读取课表…")
                         }
-                        Text("记得在「设置」里核对学期第一周日期与节次时间。", style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                if (s.unrecognized > 0) {
-                    OutlinedButton(onClick = { showUnrecognized = true }) { Text("查看未识别记录") }
-                }
-                Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("完成") }
             }
+        } else {
+            when (val s = state) {
+                is ImportUiState.Done -> Column(
+                    Modifier.fillMaxSize().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("导入成功", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("共导入 ${s.count} 条课程安排（学期：${s.semester}）", style = MaterialTheme.typography.bodyMedium)
+                            if (s.unrecognized > 0) {
+                                Text("有 ${s.unrecognized} 条记录未能识别，可点击下方按钮查看说明。", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Text("记得在「设置」里核对学期第一周日期与节次时间。", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    if (s.unrecognized > 0) {
+                        OutlinedButton(onClick = { showUnrecognized = true }) { Text("查看未识别记录") }
+                    }
+                    Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("完成") }
+                }
 
-            is ImportUiState.Error -> Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("导入失败", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(s.message, style = MaterialTheme.typography.bodyMedium)
+                is ImportUiState.Error -> Column(
+                    Modifier.fillMaxSize().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("导入失败", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(s.message, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Button(onClick = { viewModel.startImport(semesterInput.ifBlank { null }) }) { Text("重试") }
+                        OutlinedButton(onClick = onClose) { Text("返回") }
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = { viewModel.startImport(semesterInput.ifBlank { null }) }) { Text("重试") }
-                    OutlinedButton(onClick = onClose) { Text("返回") }
-                }
-            }
 
-            else -> Column(
-                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(
-                    "将打开厦大统一身份认证页面。登录成功后 App 会自动从教务系统拉取本学期课表。",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                OutlinedTextField(
-                    value = semesterInput,
-                    onValueChange = { semesterInput = it },
-                    label = { Text("学期代码（选填，如 ${viewModel.semesterCodeGuess()}）") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    "提示：留空时 App 会自动尝试获取当前学期；若导入结果为空或其他学期，可手动填写。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                )
-                Button(
-                    onClick = { viewModel.startImport(semesterInput.ifBlank { null }) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("下一步：登录并导入") }
+                else -> Column(
+                    Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        "将打开厦大统一身份认证页面。登录成功后 App 会自动从教务系统拉取本学期课表。",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    OutlinedTextField(
+                        value = semesterInput,
+                        onValueChange = { semesterInput = it },
+                        label = { Text("学期代码（选填，如 ${viewModel.semesterCodeGuess()}）") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "提示：留空时 App 会自动尝试获取当前学期；若导入结果为空或其他学期，可手动填写。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                    Button(
+                        onClick = { viewModel.startImport(semesterInput.ifBlank { null }) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("下一步：登录并导入") }
+                }
             }
         }
     }

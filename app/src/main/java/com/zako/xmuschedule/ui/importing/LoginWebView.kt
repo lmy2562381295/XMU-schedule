@@ -6,6 +6,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,16 +20,22 @@ import com.zako.xmuschedule.util.AppLog
 private const val SESSION_COOKIE = "SAAS_U="
 
 /**
- * CAS 登录 WebView：从教务系统自身的 /login 入口进入。
- * 成功判定优先看接口路径下的 SAAS_U cookie；若落到教务首页仍未见该 cookie，
- * 则触发一次服务端会话探测（onPortalLanded），以接口实际返回为准。
+ * CAS 登录 WebView：入口是带编码 service 的应用登录链。
+ * 页面保持挂载直到导入完成——后续取数直接在这个页面里用 fetch 完成。
+ * 登录就绪的判定：接口路径下出现 SAAS_U，或已落到教务首页（两种情况都交给
+ * 页面内取数流程去验证，以服务端返回为准）。
  */
 @Composable
 fun LoginWebView(
-    onSuccess: () -> Unit,
-    onPortalLanded: () -> Unit,
+    onReady: () -> Unit,
+    onAttach: (WebView) -> Unit,
+    onDetach: () -> Unit,
 ) {
     var succeeded by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose { onDetach() }
+    }
 
     AndroidView(
         modifier = Modifier.fillMaxSize(),
@@ -41,24 +48,29 @@ fun LoginWebView(
                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
                 webViewClient = object : WebViewClient() {
-                    private var portalProbeFired = false
-
                     private fun check(url: String?) {
                         if (succeeded) return
                         val host = url?.let { Uri.parse(it).host } ?: return
                         if (host != "jw.xmu.edu.cn") return
-                        val cookie = JwClient(appContext).apiCookie().orEmpty()
-                        if (cookie.contains(SESSION_COOKIE)) {
-                            AppLog.event(appContext, "webview", "登录成功（接口路径下检测到 SAAS_U），landing=$url")
+                        val cookie = JwClient.apiCookie().orEmpty()
+                        val hasSession = cookie.contains(SESSION_COOKIE)
+                        if (hasSession || url.contains("/new/index.html")) {
+                            AppLog.event(
+                                appContext, "webview",
+                                "登录流程就绪（SAAS_U=$hasSession），landing=$url cookies=${cookieNames()}",
+                            )
                             CookieManager.getInstance().flush()
                             succeeded = true
-                            onSuccess()
-                        } else if (url.contains("/new/index.html") && !portalProbeFired) {
-                            portalProbeFired = true
-                            AppLog.event(appContext, "webview", "落到教务首页未见 SAAS_U，触发服务端会话探测")
-                            onPortalLanded()
+                            onReady()
                         }
                     }
+
+                    private fun cookieNames(): String =
+                        CookieManager.getInstance().getCookie(JwUrls.BASE)
+                            ?.split(';')
+                            ?.map { it.trim().substringBefore('=') }
+                            ?.joinToString(",")
+                            .orEmpty()
 
                     override fun onPageFinished(view: WebView, url: String?) {
                         CookieManager.getInstance().flush()
@@ -82,7 +94,7 @@ fun LoginWebView(
                 }
                 AppLog.event(appContext, "webview", "打开登录入口: ${JwUrls.CAS_LOGIN}")
                 loadUrl(JwUrls.CAS_LOGIN)
-            }
+            }.also { onAttach(it) }
         },
     )
 }

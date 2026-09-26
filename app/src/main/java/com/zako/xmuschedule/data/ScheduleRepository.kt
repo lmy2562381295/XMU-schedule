@@ -51,6 +51,25 @@ class ScheduleRepository(private val context: Context) {
             ImportResult.Success(parsed.courses.size, parsed.unrecognized.size, code)
         }
 
+    /** 页面内取数结果写库（WebView fetch 拿到的原始文本） */
+    suspend fun applyWebImport(raw: String, semesterCode: String): ImportResult =
+        withContext(Dispatchers.IO) {
+            val parsed = JwScheduleParser.parse(raw)
+            AppLog.event(
+                context, "repo",
+                "页面内导入: 学期=$semesterCode 课程=${parsed.courses.size} 未识别=${parsed.unrecognized.size}",
+            )
+            saveRawDump(raw, semesterCode)
+            if (parsed.courses.isEmpty()) {
+                ImportResult.Failure(
+                    "接口返回了 ${parsed.unrecognized.size} 条数据但未能解析出任何课程（字段命名可能与预期不同）。原始返回已保存，可用于适配。"
+                )
+            } else {
+                replaceAll(parsed, semesterCode)
+                ImportResult.Success(parsed.courses.size, parsed.unrecognized.size, semesterCode)
+            }
+        }
+
     /** 解析结果写入数据库（整表替换），学期代码同步更新 */
     suspend fun replaceAll(parsed: JwScheduleParser.ScheduleParseResult, semesterCode: String) {
         db.courseDao().clear()
