@@ -62,7 +62,10 @@ fun ImportScreen(onClose: () -> Unit) {
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
-                LoginWebView(onSuccess = viewModel::onLoginSuccess)
+                LoginWebView(
+                    onSuccess = viewModel::onLoginSuccess,
+                    onPortalLanded = viewModel::onPortalLanded,
+                )
             }
 
             ImportUiState.Loading -> Column(

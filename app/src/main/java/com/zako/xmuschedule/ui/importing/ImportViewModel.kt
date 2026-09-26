@@ -75,19 +75,46 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 transition(ImportUiState.NeedLogin("请完成厦大统一身份认证登录"), "need login")
                 return
             }
-            when (val result = repo.importFromJw(client, code)) {
-                is ImportResult.Success -> {
-                    ReminderScheduler.scheduleWindow(app)
-                    transition(ImportUiState.Done(result.count, result.unrecognized, result.semester), "success")
-                }
-                is ImportResult.Failure -> transition(ImportUiState.Error(result.message), "failure: ${result.message.take(80)}")
-            }
+            doImport(client, code)
         } catch (t: Throwable) {
             AppLog.error(app, "import", t)
             transition(
                 ImportUiState.Error("导入过程出现异常：${t.javaClass.simpleName}: ${t.message}"),
                 "exception",
             )
+        }
+    }
+
+    /**
+     * 落到教务首页但 WebView 层未检测到 SAAS_U 时的兜底：直接用接口探测会话，
+     * 有效则继续导入（以服务端返回为准，不依赖 cookie 名字与路径猜测）。
+     */
+    fun onPortalLanded() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (_state.value !is ImportUiState.NeedLogin) return@launch
+                val app = getApplication<Application>()
+                val client = JwClient(app)
+                val valid = client.isSessionValid()
+                AppLog.event(app, "import", "落地页会话探测 isSessionValid=$valid")
+                if (valid && _state.value is ImportUiState.NeedLogin) {
+                    transition(ImportUiState.Loading, "落地页探测通过")
+                    doImport(client, pendingCode)
+                }
+            } catch (t: Throwable) {
+                AppLog.error(getApplication(), "import", t)
+            }
+        }
+    }
+
+    private suspend fun doImport(client: JwClient, code: String?) {
+        val app = getApplication<Application>()
+        when (val result = repo.importFromJw(client, code)) {
+            is ImportResult.Success -> {
+                ReminderScheduler.scheduleWindow(app)
+                transition(ImportUiState.Done(result.count, result.unrecognized, result.semester), "success")
+            }
+            is ImportResult.Failure -> transition(ImportUiState.Error(result.message), "failure: ${result.message.take(80)}")
         }
     }
 

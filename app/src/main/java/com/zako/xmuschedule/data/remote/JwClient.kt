@@ -66,19 +66,27 @@ class JwClient(private val context: Context) {
         postForm(JwUrls.XSKCB, "{}").use { resp ->
             val text = resp.body?.string().orEmpty().trimStart()
             val valid = text.startsWith("{")
-            val cookieNames = CookieManager.getInstance()
-                .getCookie(JwUrls.BASE)?.split(';')
-                ?.map { it.trim().substringBefore('=') }
-                .orEmpty()
+            val cookieNames = apiCookieNames()
             AppLog.event(
                 context, "jw",
-                "isSessionValid -> $valid (body 首 20 字符: ${text.take(20).replace('\n', ' ')}) cookies=${cookieNames.joinToString(",")}",
+                "isSessionValid -> $valid (body 首 20 字符: ${text.take(20).replace('\n', ' ')}) cookies=$cookieNames",
             )
             valid
         }
     } catch (e: Exception) {
         AppLog.error(context, "jw", e)
         false
+    }
+
+    /** 用真实接口的完整路径查 cookie（cookie 可能带 Path=/jwapp 之类的限制） */
+    fun apiCookie(): String? = CookieManager.getInstance().getCookie(JwUrls.BASE + JwUrls.XSKCB)
+
+    fun apiCookieNames(): String =
+        apiCookie()?.split(';')?.map { it.trim().substringBefore('=') }?.joinToString(",").orEmpty()
+
+    companion object {
+        /** 静态版本供 WebView 回调等无实例场景使用 */
+        fun apiCookie(): String? = CookieManager.getInstance().getCookie(JwUrls.BASE + JwUrls.XSKCB)
     }
 
     /**
