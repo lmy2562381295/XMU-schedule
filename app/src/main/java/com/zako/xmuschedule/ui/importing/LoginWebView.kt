@@ -2,6 +2,7 @@ package com.zako.xmuschedule.ui.importing
 
 import android.app.Application
 import android.net.Uri
+import android.webkit.CookieManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.fillMaxSize

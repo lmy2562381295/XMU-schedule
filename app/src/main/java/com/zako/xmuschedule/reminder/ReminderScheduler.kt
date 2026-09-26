@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Build
 import com.zako.xmuschedule.data.Prefs
 import com.zako.xmuschedule.data.db.AppDatabase
+import com.zako.xmuschedule.data.db.weekNumbers
 import com.zako.xmuschedule.util.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -57,7 +58,7 @@ object ReminderScheduler {
                 if (!course.weekNumbers().contains(week)) continue
 
                 val period = periods[course.startSection] ?: continue
-                val start = runCatching { LocalTime.parse(period.startTime) }.getOrElse { continue }
+                val start = runCatching { LocalTime.parse(period.startTime) }.getOrNull() ?: continue
                 val triggerAt = date.atTime(start).minusMinutes(leadMinutes)
                 if (!triggerAt.isAfter(LocalDateTime.now())) continue
 

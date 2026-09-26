@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import com.zako.xmuschedule.data.Prefs
 import com.zako.xmuschedule.data.db.AppDatabase
+import com.zako.xmuschedule.data.db.weekNumbers
 import com.zako.xmuschedule.util.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

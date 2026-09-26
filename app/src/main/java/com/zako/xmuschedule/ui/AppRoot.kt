@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.automirrored.filled.Today
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -34,7 +34,7 @@ object Routes {
 private data class BottomItem(val route: String, val label: String, val icon: ImageVector)
 
 private val bottomItems = listOf(
-    BottomItem(Routes.TODAY, "今日", Icons.AutoMirrored.Filled.Today),
+    BottomItem(Routes.TODAY, "今日", Icons.Filled.Today),
     BottomItem(Routes.WEEK, "周课表", Icons.Filled.CalendarMonth),
     BottomItem(Routes.SETTINGS, "设置", Icons.Filled.Settings),
 )

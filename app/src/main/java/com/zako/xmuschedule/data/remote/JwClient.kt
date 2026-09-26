@@ -6,6 +6,8 @@ import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
 object JwUrls {
@@ -128,7 +130,7 @@ class JwClient {
     }
 
     private fun postRaw(path: String, json: String): Response {
-        val body = okhttp3.RequestBody.create(okhttp3.MediaType.parse("application/json; charset=utf-8"), json)
+        val body = json.toRequestBody("application/json; charset=utf-8".toMediaType())
         val request = Request.Builder().url(JwUrls.BASE + path).post(body).build()
         return http.newCall(request).execute()
     }
