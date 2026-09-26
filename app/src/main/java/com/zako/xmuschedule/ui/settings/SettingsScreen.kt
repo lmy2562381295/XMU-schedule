@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -42,12 +43,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zako.xmuschedule.data.db.PeriodTimeEntity
+import com.zako.xmuschedule.util.AppLog
 import java.time.LocalDate
 
 private val leadOptions = listOf(5, 10, 15, 30)
@@ -62,7 +66,9 @@ fun SettingsScreen(onGoImport: () -> Unit) {
     var showDatePicker by remember { mutableStateOf(false) }
     var editingPeriod by remember { mutableStateOf<PeriodTimeEntity?>(null) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showLog by remember { mutableStateOf(false) }
     var lead by remember { mutableStateOf(viewModel.leadMinutes()) }
+    val clipboard = LocalClipboardManager.current
 
     val notifPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -175,6 +181,7 @@ fun SettingsScreen(onGoImport: () -> Unit) {
                     OutlinedButton(onClick = viewModel::loadDemo) { Text("载入演示课表") }
                 }
                 OutlinedButton(onClick = { showClearConfirm = true }) { Text("清空全部课程数据") }
+                OutlinedButton(onClick = { showLog = true }) { Text("查看运行日志（排障用）") }
             }
         }
 
@@ -238,6 +245,29 @@ fun SettingsScreen(onGoImport: () -> Unit) {
                 }) { Text("保存") }
             },
             dismissButton = { TextButton(onClick = { editingPeriod = null }) { Text("取消") } },
+        )
+    }
+
+    // 运行日志
+    if (showLog) {
+        AlertDialog(
+            onDismissRequest = { showLog = false },
+            title = { Text("运行日志") },
+            text = {
+                SelectionContainer {
+                    Text(
+                        text = AppLog.read(context).ifBlank { "（暂无日志）" },
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.height(280.dp).verticalScroll(rememberScrollState()),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { clipboard.setText(AnnotatedString(AppLog.read(context))) }) { Text("复制") }
+            },
+            dismissButton = {
+                TextButton(onClick = { AppLog.clear(context); showLog = false }) { Text("清空并关闭") }
+            },
         )
     }
 
