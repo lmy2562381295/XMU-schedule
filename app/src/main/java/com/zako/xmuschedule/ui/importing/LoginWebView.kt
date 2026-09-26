@@ -74,6 +74,12 @@ fun LoginWebView(
 
                     override fun onPageFinished(view: WebView, url: String?) {
                         CookieManager.getInstance().flush()
+                        if (!succeeded) {
+                            AppLog.event(
+                                appContext, "webview",
+                                "页面加载完成: ${url?.take(140)} cookies=${cookieNames()}",
+                            )
+                        }
                         check(url)
                     }
 
@@ -89,6 +95,9 @@ fun LoginWebView(
                     }
 
                     override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+                        if (!succeeded && url != null && url.contains("ticket=")) {
+                            AppLog.event(appContext, "webview", "票据回跳: ${url.take(160)}")
+                        }
                         check(url)
                     }
                 }
