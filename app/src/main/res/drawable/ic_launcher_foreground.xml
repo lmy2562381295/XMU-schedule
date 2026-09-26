@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 启动图标前景：白色"课程表"日历图形（在蓝色背景上显示） -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.5"
+        android:scaleY="0.5"
+        android:translateX="27"
+        android:translateY="27">
+        <!-- 顶部装订环 -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M38,10 h6 v14 h-6 Z M64,10 h6 v14 h-6 Z" />
+        <!-- 日历本体（挖空内容区，内容区内留白色横条作"文字"） -->
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M30,16 h48 a6,6 0 0 1 6,6 v58 a6,6 0 0 1 -6,6 h-48 a6,6 0 0 1 -6,-6 v-58 a6,6 0 0 1 6,-6 Z M30,42 h48 v34 h-48 Z M38,50 h26 v6 h-26 Z M38,62 h32 v6 h-32 Z" />
+    </group>
+</vector>

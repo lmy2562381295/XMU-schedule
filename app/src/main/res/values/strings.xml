@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">厦大课表</string>
+    <string name="channel_name">上课提醒</string>
+    <string name="channel_desc">每节课开始前推送提醒通知</string>
+    <string name="notif_title">还有 %1$d 分钟上课：%2$s</string>
+    <string name="notif_test_title">测试通知：提醒功能正常</string>
+    <string name="notif_test_body">收到这条通知说明提醒渠道工作正常。</string>
+    <string name="tab_today">今日</string>
+    <string name="tab_week">周课表</string>
+    <string name="tab_settings">设置</string>
+</resources>
