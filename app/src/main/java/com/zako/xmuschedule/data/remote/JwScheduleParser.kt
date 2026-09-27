@@ -56,11 +56,18 @@ object JwScheduleParser {
         return ScheduleParseResult(mergeContiguous(courses), unrecognized, body, semester)
     }
 
-    /** 同一门课相邻节次常被拆成多行（如 7-7 与 8-8），仅在各字段完全一致时合并为连续跨度 */
+    /**
+     * 同一门课相邻节次常被拆成多行（如 7-7 与 8-8），合并为连续跨度；
+     * 另外学校会把同一节课按平行分班拆成多行（同一时间、不同教室），时间重叠的行也去重合并，
+     * 否则顺序布局会把第二行挤到后面的节次显示（表现为凭空多出的块）。
+     */
     private fun mergeContiguous(courses: List<ParsedCourse>): List<ParsedCourse> {
         val merged = mutableListOf<ParsedCourse>()
         val groups = courses.groupBy {
-            listOf(it.name, it.teacher, it.dayOfWeek.toString(), it.weeks.toString(), it.room, it.campus)
+            listOf(
+                it.jxbid?.takeIf { j -> j.isNotBlank() } ?: (it.name + "|" + it.teacher),
+                it.dayOfWeek.toString(),
+            )
         }
         for (group in groups.values) {
             val sorted = group.sortedBy { it.startSection }
@@ -68,7 +75,11 @@ object JwScheduleParser {
             for (i in 1 until sorted.size) {
                 val cur = sorted[i]
                 if (cur.startSection <= acc.endSection + 1) {
-                    acc = acc.copy(endSection = maxOf(acc.endSection, cur.endSection))
+                    acc = acc.copy(
+                        endSection = maxOf(acc.endSection, cur.endSection),
+                        weeks = acc.weeks + cur.weeks,
+                        room = acc.room.ifBlank { cur.room },
+                    )
                 } else {
                     merged.add(acc)
                     acc = cur
