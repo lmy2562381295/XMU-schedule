@@ -71,8 +71,8 @@ class ScheduleRepository(private val context: Context) {
                 } ?: return@runCatching emptyList()
                 (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }
                     .filter { r ->
-                        val room = r.optString("JASMC", "").ifBlank { r.optString("JSMC", "") }
-                        room.isBlank()
+                        // 与 parseRow 一致：教室只看 JASMC/JXL（JSMC 在该部署是教师名，不能当教室判断）
+                        r.optString("JASMC", "").isBlank() && r.optString("JXL", "").isBlank()
                     }
                     .take(6)
                     .map { r ->
@@ -87,7 +87,7 @@ class ScheduleRepository(private val context: Context) {
             val dayNames = listOf("一", "二", "三", "四", "五", "六", "日")
             val detail = parsed.courses.joinToString("；") {
                 "${it.name} 周${dayNames[it.dayOfWeek - 1]} ${it.startSection}-${it.endSection}节 " +
-                    "周${it.weeks.min()}-${it.weeks.max()} ${it.room.ifBlank { "无教室" }}"
+                    "周${it.weeks.min()}-${it.weeks.max()}[${it.weeksText}] ${it.room.ifBlank { "无教室" }}"
             }
             AppLog.event(context, "repo", "导入明细: ${detail.take(1500)}")
             saveRawDump(raw, semesterCode)

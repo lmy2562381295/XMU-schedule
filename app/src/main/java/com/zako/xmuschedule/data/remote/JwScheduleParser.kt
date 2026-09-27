@@ -193,21 +193,7 @@ object JwScheduleParser {
         return null
     }
 
-    /** 多教室合并展示：同楼不同室压缩为 "文宣楼（4号楼）B404/B405"，否则用顿号并列 */
-    private fun mergeRooms(rooms: List<String>): String {
-        val distinct = rooms.filter { it.isNotBlank() }.distinct()
-        if (distinct.size <= 1) return distinct.firstOrNull().orEmpty()
-        var prefix = distinct.first()
-        for (other in distinct.drop(1)) {
-            while (prefix.isNotEmpty() && !other.startsWith(prefix)) {
-                prefix = prefix.dropLast(1)
-            }
-        }
-        if (prefix.length >= 3) {
-            val rests = distinct.map { it.removePrefix(prefix) }
-            val simple = rests.all { r -> r.length <= 6 && !r.contains('（') && !r.contains('(') }
-            if (simple) return prefix + rests.joinToString("/")
-        }
-        return distinct.joinToString("、")
-    }
+    /** 多教室合并展示：完整并列（"文宣楼（4号楼）B404、文宣楼（4号楼）B405"），卡片内可换行 */
+    private fun mergeRooms(rooms: List<String>): String =
+        rooms.filter { it.isNotBlank() }.distinct().joinToString("、")
 }
