@@ -114,6 +114,10 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                     append("}")
                 }
                 val body = "requestJson=" + Uri.encode(requestObj)
+                AppLog.event(
+                    app, "import",
+                    "取数请求: 学期=$code 携带学号=${studentId?.takeIf { it.isNotBlank() } != null}",
+                )
                 var raw = ""
                 var attempt = 0
                 while (attempt < 2) {

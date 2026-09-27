@@ -137,8 +137,7 @@ fun ImportScreen(onClose: () -> Unit) {
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
+                    )                    OutlinedTextField(
                         value = semesterInput,
                         onValueChange = { semesterInput = it },
                         label = { Text("学期代码（选填，如 ${viewModel.semesterCodeGuess()}）") },
@@ -153,7 +152,8 @@ fun ImportScreen(onClose: () -> Unit) {
                     Button(
                         onClick = { viewModel.startImport(semesterInput.ifBlank { null }, studentInput.ifBlank { null }) },
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text("下一步：登录并导入") }
+                        enabled = studentInput.isNotBlank(),
+                    ) { Text(if (studentInput.isBlank()) "请先填写学号" else "下一步：登录并导入") }
                 }
             }
         }
