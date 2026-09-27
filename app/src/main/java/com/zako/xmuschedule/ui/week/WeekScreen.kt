@@ -239,26 +239,24 @@ private fun CourseBlock(course: CourseEntity, height: androidx.compose.ui.unit.D
             fontSize = 9.sp,
             lineHeight = 10.sp,
             color = Color.White,
-            maxLines = 2,
+            maxLines = 3,
             overflow = TextOverflow.Ellipsis,
             fontWeight = FontWeight.SemiBold,
         )
-        if (course.room.isNotBlank()) {
-            Text(
-                course.room,
-                fontSize = 8.sp,
-                lineHeight = 9.sp,
-                color = Color.White.copy(alpha = 0.92f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Text(
+            course.room.ifBlank { "线上课" },
+            fontSize = 8.sp,
+            lineHeight = 9.sp,
+            color = Color.White.copy(alpha = 0.92f),
+            maxLines = 4,
+            overflow = TextOverflow.Ellipsis,
+        )
         if (course.teacher.isNotBlank()) {
             Text(
                 course.teacher,
                 fontSize = 8.sp,
                 color = Color.White.copy(alpha = 0.85f),
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

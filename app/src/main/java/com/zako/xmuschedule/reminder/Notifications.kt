@@ -42,7 +42,7 @@ object Notifications {
             return
         }
         val body = buildString {
-            append(course.room.ifBlank { "教室待定" })
+            append(course.room.ifBlank { "线上课" })
             append(" · 第${course.startSection}-${course.endSection}节")
             if (course.teacher.isNotBlank()) append(" · ").append(course.teacher)
         }

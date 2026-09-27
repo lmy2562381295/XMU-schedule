@@ -59,6 +59,26 @@ class ScheduleRepository(private val context: Context) {
                 context, "repo",
                 "页面内导入: 学期=$semesterCode 课程=${parsed.courses.size} 未识别=${parsed.unrecognized.size}",
             )
+            // 无教室的行完整打进日志（教室可能藏在别的字段名里）
+            val blankRoomRows = runCatching {
+                val datas = JSONObject(raw).optJSONObject("datas") ?: return@runCatching null
+                val node = datas.opt("xskcb") ?: return@runCatching null
+                val rows = when (node) {
+                    is org.json.JSONArray -> node
+                    is JSONObject -> node.optJSONArray("rows")
+                    else -> null
+                } ?: return@runCatching null
+                (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }
+                    .filter { r ->
+                        val room = r.optString("JASMC", "").ifBlank { r.optString("JSMC", "") }
+                        room.isBlank()
+                    }
+                    .take(2)
+                    .map { it.toString() }
+            }.getOrDefault(emptyList())
+            blankRoomRows.forEachIndexed { i, rowJson ->
+                AppLog.event(context, "repo", "无教室原始行${i + 1}: $rowJson")
+            }
             // 导入明细（便于远程核对合并与字段解析结果）
             val dayNames = listOf("一", "二", "三", "四", "五", "六", "日")
             val detail = parsed.courses.joinToString("；") {

@@ -73,7 +73,7 @@ fun TodayScreen(
                                 Text(item.course.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    "${item.startText}–${item.endText} · ${item.course.room.ifBlank { "教室待定" }}",
+                                    "${item.startText}–${item.endText} · ${item.course.room.ifBlank { "线上课" }}",
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                                 if (item.course.teacher.isNotBlank()) {
