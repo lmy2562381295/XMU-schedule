@@ -62,13 +62,13 @@ class ScheduleRepository(private val context: Context) {
             )
             // 无教室的行完整打进日志（教室可能藏在别的字段名里）
             val blankRoomRows: List<String> = runCatching {
-                val datas = JSONObject(raw).optJSONObject("datas") ?: return@runCatching null
-                val node = datas.opt("xskcb") ?: return@runCatching null
+                val datas = JSONObject(raw).optJSONObject("datas") ?: return@runCatching emptyList()
+                val node = datas.opt("xskcb") ?: return@runCatching emptyList()
                 val rows = when (node) {
                     is org.json.JSONArray -> node
                     is JSONObject -> node.optJSONArray("rows")
                     else -> null
-                } ?: return@runCatching null
+                } ?: return@runCatching emptyList()
                 (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }
                     .filter { r ->
                         val room = r.optString("JASMC", "").ifBlank { r.optString("JSMC", "") }
