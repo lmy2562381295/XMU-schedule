@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.zako.xmuschedule.data.ImportResult
 import com.zako.xmuschedule.data.ScheduleRepository
+import com.zako.xmuschedule.data.remote.JwScheduleParser
 import com.zako.xmuschedule.data.remote.JwUrls
 import com.zako.xmuschedule.reminder.ReminderScheduler
 import com.zako.xmuschedule.util.AppLog
@@ -91,44 +92,53 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
             val wv = webView ?: error("WebView 未就绪")
             delay(2500) // 等待应用入口的 SSO 链与页面稳定
 
-            var code = pendingCode?.takeIf { it.isNotBlank() }
-            if (code == null) {
-                code = resolveSemesterCode(wv) ?: TimeUtils.guessSemesterCode()
-                AppLog.event(app, "import", "学期代码=$code")
-            }
+            val userCode = pendingCode?.takeIf { it.isNotBlank() }
+            val autoCode = resolveSemesterCode(wv)
+            AppLog.event(app, "import", "学期候选: 自动=$autoCode 输入=$userCode 预填=${TimeUtils.guessSemesterCode()}")
+
+            val candidates = LinkedHashSet<String>()
+            userCode?.let { candidates.add(it) }
+            autoCode?.let { candidates.add(it) }
+            candidates.add(TimeUtils.guessSemesterCode())
 
             val url = JwUrls.BASE + JwUrls.XSKCB
-            val body = "requestJson=" + Uri.encode("""{"XNXQDM":"$code"}""")
+            for (code in candidates) {
+                val body = "requestJson=" + Uri.encode("""{"XNXQDM":"$code"}""")
+                var raw = ""
+                var attempt = 0
+                while (attempt < 2) {
+                    attempt += 1
+                    raw = inPageFetch(wv, url, body)
+                    AppLog.event(
+                        app, "import",
+                        "取数 学期=$code 第${attempt}次: len=${raw.length} 正文=${raw.take(400).replace('\n', ' ')}",
+                    )
+                    if (raw.trimStart().startsWith("{")) break
+                    delay(2500)
+                }
+                if (!raw.trimStart().startsWith("{")) continue
 
-            var raw = ""
-            var attempt = 0
-            while (attempt < 3) {
-                attempt += 1
-                raw = inPageFetch(wv, url, body)
-                AppLog.event(
-                    app, "import",
-                    "页面内取数 第${attempt}次: len=${raw.length} 首20=${raw.take(20).replace('\n', ' ')}",
-                )
-                if (raw.trimStart().startsWith("{")) break
-                delay(2500)
-            }
-            if (!raw.trimStart().startsWith("{")) {
-                transition(
-                    ImportUiState.Error(
-                        "页面内取数未返回 JSON（会话可能仍无效）。原文开头：${raw.take(80)}"
-                    ),
-                    "fetch not json",
-                )
+                val parsed = JwScheduleParser.parse(raw)
+                if (parsed.courses.isEmpty()) {
+                    AppLog.event(app, "import", "学期=$code 返回 0 条课程，尝试下一候选")
+                    continue
+                }
+                when (val result = repo.applyWebImport(raw, code)) {
+                    is ImportResult.Success -> {
+                        ReminderScheduler.scheduleWindow(app)
+                        transition(ImportUiState.Done(result.count, result.unrecognized, result.semester), "success")
+                    }
+                    is ImportResult.Failure -> transition(ImportUiState.Error(result.message), "failure")
+                }
                 return
             }
-
-            when (val result = repo.applyWebImport(raw, code)) {
-                is ImportResult.Success -> {
-                    ReminderScheduler.scheduleWindow(app)
-                    transition(ImportUiState.Done(result.count, result.unrecognized, result.semester), "success")
-                }
-                is ImportResult.Failure -> transition(ImportUiState.Error(result.message), "failure")
-            }
+            transition(
+                ImportUiState.Error(
+                    "所有学期候选均未取到课程（尝试：${candidates.joinToString("、")}）。" +
+                        "可能是学期代码格式与学校不一致——请把运行日志发我，日志里有学期列表接口的原始返回，可据此修正。"
+                ),
+                "empty all",
+            )
         } catch (t: Throwable) {
             AppLog.error(app, "import", t)
             transition(
@@ -147,8 +157,8 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 JwUrls.BASE + JwUrls.XNXQDM,
                 "requestJson=" + Uri.encode("""{"XN":"$year"}"""),
             )
+            AppLog.event(app = getApplication(), tag = "import", message = "学期接口返回: ${resp.take(300).replace('\n', ' ')}")
             if (!resp.trimStart().startsWith("{")) {
-                AppLog.event(getApplication(), "import", "学期接口未返回 JSON，使用预填 $guess")
                 null
             } else {
                 extractSemesterCode(resp, year) ?: guess
