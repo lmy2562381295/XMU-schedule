@@ -119,18 +119,18 @@ object JwScheduleParser {
         var room = listOfNotNull(
             firstNonBlank(row, "JASMC"),
             firstNonBlank(row, "JXL"),
-        ).filter { it.isNotBlank() }.joinToString(" ").ifBlank {
-            firstNonBlank(row, "JSMC", "ROOM") ?: ""
-        }
-        // 教室缺失时从 YPSJDD（"1-16周 星期一 第5节-第6节 坤銮楼（2号楼）A402,..." 或 "2-16双周 星期一[7-8节]西部片区4号楼106"）兜底提取
+        ).filter { it.isNotBlank() }.joinToString(" ")
+        // 教室缺失时从 YPSJDD 兜底提取（兼容 [7-8节] 括号格式）；
+        // 提取结果必须含数字且不含 "周" 字，避免把 "1-2周" 这类周次文本当成教室
         if (room.isBlank()) {
             val ypsjdd = firstNonBlank(row, "YPSJDD")
             if (ypsjdd != null) {
                 val firstMeeting = ypsjdd.split(',').firstOrNull().orEmpty()
-                // 兼容 "第5节-第6节 教室" 与 "[7-8节]教室" 两种写法，取节次标记之后的教室文本
-                val tail = firstMeeting.substringAfterLast("节")
-                room = tail.trimStart(']', '）', ')', ' ', '　')
-                if (campus.isBlank()) campus = firstMeeting.substringAfter("星期", "").trim()
+                val tail = firstMeeting.substringAfterLast("节").trimStart(']', '）', ')', ' ', '　')
+                if (tail.contains(Regex("\\d")) && !tail.contains("周")) {
+                    room = tail
+                    if (campus.isBlank()) campus = firstMeeting.substringAfter("星期", "").trim()
+                }
             }
         }
         return ParsedCourse(
