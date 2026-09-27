@@ -26,8 +26,8 @@ Daemon will be stopped at the end of the build
 > Task :app:mergeDebugStartupProfile
 > Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
-> Task :app:processDebugResources
 > Task :app:mergeDebugNativeLibs
+> Task :app:processDebugResources
 > Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
@@ -40,15 +40,35 @@ Unable to strip the following libraries, packaging them as they are: libandroidx
 > Task :app:mergeExtDexDebug
 
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/ImportScreen.kt:44:18 Cannot infer type for this parameter. Please specify it explicitly.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/ImportScreen.kt:44:18 Property delegate must have a 'getValue(Nothing?, KProperty0<ERROR CLASS: Cannot infer argument for type parameter T>)' method. None of the following functions is applicable:
-fun <T> State<T>.getValue(thisObj: Any?, property: KProperty<*>): T
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/ImportScreen.kt:44:28 Unresolved reference 'state'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/ImportScreen.kt:44:34 Cannot infer type for this parameter. Please specify it explicitly.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/ImportScreen.kt:144:63 Unresolved reference 'semesterCodeGuess'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/ImportViewModel.kt:76:13 Unresolved reference '_state'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/ImportViewModel.kt:83:9 Unresolved reference '_state'.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run-1790481792936.json
+e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/week/WeekScreen.kt:94:69 None of the following candidates is applicable:
+fun times(other: Byte): Float
+fun times(other: Double): Double
+fun times(other: Float): Float
+fun times(other: Int): Float
+fun times(other: Long): Float
+fun times(other: Short): Float
+e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/week/WeekScreen.kt:152:54 None of the following candidates is applicable:
+fun times(other: Byte): Int
+fun times(other: Double): Double
+fun times(other: Float): Float
+fun times(other: Int): Int
+fun times(other: Long): Long
+fun times(other: Short): Int
+e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/week/WeekScreen.kt:160:51 None of the following candidates is applicable:
+fun times(other: Byte): Int
+fun times(other: Double): Double
+fun times(other: Float): Float
+fun times(other: Int): Int
+fun times(other: Long): Long
+fun times(other: Short): Int
+e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/week/WeekScreen.kt:167:81 None of the following candidates is applicable:
+fun times(other: Byte): Int
+fun times(other: Double): Double
+fun times(other: Float): Float
+fun times(other: Int): Int
+fun times(other: Long): Long
+fun times(other: Short): Int
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run-1790484075990.json
 
 FAILURE: Build failed with an exception.
 
@@ -63,5 +83,5 @@ Execution failed for task ':app:compileDebugKotlin'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 37s
+BUILD FAILED in 38s
 30 actionable tasks: 30 executed
