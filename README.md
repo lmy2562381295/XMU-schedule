@@ -8,6 +8,10 @@
 - **演示模式**：不登录即可载入内置演示课表，完整体验界面与提醒逻辑
 - **隐私**：所有数据（课程、会话 cookie、设置）仅保存在手机本地，无任何上报
 
+## 下载安装包
+
+无需本地构建：到 [**Releases**](https://github.com/lmy2562381295/XMU-schedule/releases) 页面下载最新 APK 直接安装（页面内附导入演示视频）。每次推送代码后 Actions 会自动构建新版本。
+
 ## 构建步骤
 
 1. 安装 [Android Studio](https://developer.android.com/studio)（Ladybug 或更新版本，需含 JDK 17）
