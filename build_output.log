@@ -8,8 +8,8 @@ Daemon will be stopped at the end of the build
 > Task :app:checkDebugAarMetadata
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
-> Task :app:packageDebugResources
 > Task :app:mergeDebugResources
+> Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
@@ -26,8 +26,8 @@ Daemon will be stopped at the end of the build
 > Task :app:mergeDebugStartupProfile
 > Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
-> Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
+> Task :app:mergeDebugNativeLibs
 > Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
@@ -40,35 +40,11 @@ Unable to strip the following libraries, packaging them as they are: libandroidx
 > Task :app:mergeExtDexDebug
 
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/week/WeekScreen.kt:94:69 None of the following candidates is applicable:
-fun times(other: Byte): Float
-fun times(other: Double): Double
-fun times(other: Float): Float
-fun times(other: Int): Float
-fun times(other: Long): Float
-fun times(other: Short): Float
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/week/WeekScreen.kt:152:54 None of the following candidates is applicable:
-fun times(other: Byte): Int
-fun times(other: Double): Double
-fun times(other: Float): Float
-fun times(other: Int): Int
-fun times(other: Long): Long
-fun times(other: Short): Int
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/week/WeekScreen.kt:160:51 None of the following candidates is applicable:
-fun times(other: Byte): Int
-fun times(other: Double): Double
-fun times(other: Float): Float
-fun times(other: Int): Int
-fun times(other: Long): Long
-fun times(other: Short): Int
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/week/WeekScreen.kt:167:81 None of the following candidates is applicable:
-fun times(other: Byte): Int
-fun times(other: Double): Double
-fun times(other: Float): Float
-fun times(other: Int): Int
-fun times(other: Long): Long
-fun times(other: Short): Int
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run-1790484075990.json
+e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/data/ScheduleRepository.kt:64:29 Unresolved reference 'JSONObject'.
+e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/data/ScheduleRepository.kt:68:24 Unresolved reference 'JSONObject'.
+e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/data/ScheduleRepository.kt:68:43 Unresolved reference 'optJSONArray'.
+e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/data/ScheduleRepository.kt:79:26 Only safe (?.) or non-null asserted (!!.) calls are allowed on a nullable receiver of type 'kotlin.collections.List<kotlin.String>?'.
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run-1790488492516.json
 
 FAILURE: Build failed with an exception.
 
@@ -83,5 +59,5 @@ Execution failed for task ':app:compileDebugKotlin'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 38s
+BUILD FAILED in 32s
 30 actionable tasks: 30 executed
