@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -33,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -41,6 +43,7 @@ fun ImportScreen(onClose: () -> Unit) {
     val viewModel: ImportViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
     var semesterInput by remember { mutableStateOf("") }
+    var studentInput by remember { mutableStateOf("") }
     var showUnrecognized by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize()) {
@@ -114,7 +117,7 @@ fun ImportScreen(onClose: () -> Unit) {
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(onClick = { viewModel.startImport(semesterInput.ifBlank { null }) }) { Text("重试") }
+                        Button(onClick = { viewModel.startImport(semesterInput.ifBlank { null }, studentInput.ifBlank { null }) }) { Text("重试") }
                         OutlinedButton(onClick = onClose) { Text("返回") }
                     }
                 }
@@ -128,6 +131,14 @@ fun ImportScreen(onClose: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     OutlinedTextField(
+                        value = studentInput,
+                        onValueChange = { studentInput = it },
+                        label = { Text("学号（必填，课表查询接口需要）") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
                         value = semesterInput,
                         onValueChange = { semesterInput = it },
                         label = { Text("学期代码（选填，如 ${viewModel.semesterCodeGuess()}）") },
@@ -135,12 +146,12 @@ fun ImportScreen(onClose: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Text(
-                        "提示：留空时 App 会自动尝试获取当前学期；若导入结果为空或其他学期，可手动填写。",
+                        "提示：填好学号后登录，App 会自动尝试多个学期代码取课表。",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline,
                     )
                     Button(
-                        onClick = { viewModel.startImport(semesterInput.ifBlank { null }) },
+                        onClick = { viewModel.startImport(semesterInput.ifBlank { null }, studentInput.ifBlank { null }) },
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("下一步：登录并导入") }
                 }

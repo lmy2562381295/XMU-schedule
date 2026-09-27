@@ -41,6 +41,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = ScheduleRepository(app)
     private var pendingCode: String? = null
+    private var studentId: String? = null
     private var webView: WebView? = null
 
     @Volatile
@@ -59,8 +60,9 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
 
     fun semesterCodeGuess(): String = TimeUtils.guessSemesterCode()
 
-    fun startImport(code: String?) {
+    fun startImport(code: String?, studentNo: String?) {
         pendingCode = code
+        studentId = studentNo
         transition(ImportUiState.NeedLogin("请完成厦大统一身份认证登录"), "startImport")
     }
 
@@ -103,7 +105,15 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
 
             val url = JwUrls.BASE + JwUrls.XSKCB
             for (code in candidates) {
-                val body = "requestJson=" + Uri.encode("""{"XNXQDM":"$code"}""")
+                // 该接口要求同时提供 XH（学号）与 XNXQDM（学期代码）
+                val requestObj = buildString {
+                    append("{\"XNXQDM\":\"").append(code).append("\"")
+                    studentId?.takeIf { it.isNotBlank() }?.let {
+                        append(",\"XH\":\"").append(it.trim()).append("\"")
+                    }
+                    append("}")
+                }
+                val body = "requestJson=" + Uri.encode(requestObj)
                 var raw = ""
                 var attempt = 0
                 while (attempt < 2) {
