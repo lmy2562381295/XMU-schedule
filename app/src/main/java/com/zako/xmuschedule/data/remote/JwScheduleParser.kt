@@ -74,15 +74,25 @@ object JwScheduleParser {
             var acc = sorted.first()
             for (i in 1 until sorted.size) {
                 val cur = sorted[i]
-                // 相同时间（重叠）的不同教室 → 合并一块；相邻且同教室 → 跨度合并；
-                // 相邻但不同教室 / 不相交时间 → 保持分开
                 val overlaps = cur.startSection <= acc.endSection
                 val contiguousSameRoom = cur.startSection == acc.endSection + 1 && acc.room == cur.room
-                if (overlaps || contiguousSameRoom) {
+                // 时间重叠时的合并规则：
+                //  两个都有教室（平行分班，不同教室）→ 合并一块，教室并列；
+                //  一个有教室一个无教室（线上/线下混合）→ 不合并，各保留自己的周次；
+                //  两个都无教室（重复的线上课）→ 合并去重。
+                // 相邻（前一节结束+1）且同教室 → 跨度合并；相邻但不同教室 / 不相交时间 → 分开。
+                val accOnline = acc.room.isBlank()
+                val curOnline = cur.room.isBlank()
+                val shouldMerge = if (overlaps) {
+                    (accOnline && curOnline) || (!accOnline && !curOnline)
+                } else {
+                    contiguousSameRoom
+                }
+                if (shouldMerge) {
                     acc = acc.copy(
                         endSection = maxOf(acc.endSection, cur.endSection),
                         weeks = acc.weeks + cur.weeks,
-                        room = mergeRooms(listOf(acc.room, cur.room)),
+                        room = if (accOnline && curOnline) "" else mergeRooms(listOf(acc.room, cur.room)),
                     )
                 } else {
                     merged.add(acc)
