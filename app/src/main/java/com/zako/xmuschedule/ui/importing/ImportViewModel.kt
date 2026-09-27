@@ -2,27 +2,26 @@ package com.zako.xmuschedule.ui.importing
 
 import android.app.Application
 import android.net.Uri
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.zako.xmuschedule.data.ImportResult
 import com.zako.xmuschedule.data.ScheduleRepository
-import com.zako.xmuschedule.data.remote.JwScheduleParser
 import com.zako.xmuschedule.data.remote.JwUrls
 import com.zako.xmuschedule.reminder.ReminderScheduler
 import com.zako.xmuschedule.util.AppLog
 import com.zako.xmuschedule.util.TimeUtils
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
-import org.json.JSONTokener
-import kotlin.coroutines.resume
 
 sealed interface ImportUiState {
     data object Idle : ImportUiState
@@ -43,6 +42,17 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
     private var pendingCode: String? = null
     private var webView: WebView? = null
 
+    @Volatile
+    private var pendingGate: CompletableDeferred<String>? = null
+
+    /** 暴露给页面 JS 的结果回传桥（@JavascriptInterface 回调在 JS 线程执行） */
+    private inner class FetchBridge {
+        @JavascriptInterface
+        fun postResult(payload: String) {
+            pendingGate?.complete(payload)
+        }
+    }
+
     private val _state = MutableStateFlow<ImportUiState>(ImportUiState.Idle)
     val state: StateFlow<ImportUiState> = _state.asStateFlow()
 
@@ -55,6 +65,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
 
     fun attachWebView(v: WebView) {
         webView = v
+        v.addJavascriptInterface(FetchBridge(), "ZakoBridge")
         AppLog.event(getApplication(), "import", "WebView 就绪")
     }
 
@@ -159,28 +170,31 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         candidates.lastOrNull { it.contains(yearHint) } ?: candidates.lastOrNull()
     }.getOrNull()
 
-    /** 在 WebView 当前页面（同源）里发 fetch，返回响应文本 */
-    private suspend fun inPageFetch(wv: WebView, url: String, body: String): String =
+    /** 在 WebView 当前页面（同源）里发 fetch，结果经 ZakoBridge 推回（不依赖 evaluateJavascript 回传值） */
+    private suspend fun inPageFetch(wv: WebView, url: String, body: String): String {
+        val gate = CompletableDeferred<String>()
+        pendingGate = gate
         withContext(Dispatchers.Main) {
-            suspendCancellableCoroutine { cont ->
-                val js = "(async () => { try { const resp = await fetch('$url', " +
-                    "{ method: 'POST', credentials: 'include', " +
-                    "headers: {'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}, " +
-                    "body: '$body' }); const text = await resp.text(); " +
-                    "return JSON.stringify({ status: resp.status, text: text.substring(0, 400000) }); " +
-                    "} catch (e) { return JSON.stringify({ error: String(e) }); } })()"
-                wv.evaluateJavascript(js) { result ->
-                    cont.resume(
-                        runCatching {
-                            val v = JSONTokener(result ?: "null").nextValue()
-                            when (v) {
-                                is String -> v
-                                is JSONObject -> v.optString("text")
-                                else -> result.orEmpty()
-                            }
-                        }.getOrElse { result.orEmpty() }
-                    )
+            val js = "(function(){ try { fetch('$url', {method:'POST',credentials:'include'," +
+                "headers:{'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}," +
+                "body:'$body'})" +
+                ".then(function(r){ return r.text().then(function(t){ return JSON.stringify({status:r.status,text:t.substring(0,200000)}); }); })" +
+                ".then(function(p){ ZakoBridge.postResult(p); })" +
+                ".catch(function(e){ ZakoBridge.postResult(JSON.stringify({error:String(e)})); }); " +
+                "return 'ok'; } catch(e){ return 'jserr:'+String(e); } })()"
+            wv.evaluateJavascript(js) { ret ->
+                val trimmed = ret?.trim()?.removePrefix("\"")?.removeSuffix("\"")
+                if (trimmed != "ok") {
+                    AppLog.event(getApplication(), "webview", "fetch 注入返回异常: ${ret?.take(120)}")
                 }
             }
         }
+        val payload = withTimeoutOrNull(20_000) { gate.await() } ?: ""
+        pendingGate = null
+        val parsed = runCatching { JSONObject(payload) }.getOrNull()
+        val status = parsed?.optInt("status", -1) ?: -2
+        val text = parsed?.optString("text").orEmpty()
+        AppLog.event(getApplication(), "webview", "页面内 fetch: status=$status len=${text.length}")
+        return text
+    }
 }
