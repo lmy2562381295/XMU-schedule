@@ -157,7 +157,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 JwUrls.BASE + JwUrls.XNXQDM,
                 "requestJson=" + Uri.encode("""{"XN":"$year"}"""),
             )
-            AppLog.event(app = getApplication(), tag = "import", message = "学期接口返回: ${resp.take(300).replace('\n', ' ')}")
+            AppLog.event(getApplication(), "import", "学期接口返回: ${resp.take(300).replace('\n', ' ')}")
             if (!resp.trimStart().startsWith("{")) {
                 null
             } else {
