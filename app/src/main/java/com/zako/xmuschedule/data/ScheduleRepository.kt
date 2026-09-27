@@ -61,14 +61,14 @@ class ScheduleRepository(private val context: Context) {
                 "页面内导入: 学期=$semesterCode 课程=${parsed.courses.size} 未识别=${parsed.unrecognized.size}",
             )
             // 无教室的行以紧凑格式打进日志（教室可能藏在别的字段名里）
-            val blankRoomRows = runCatching {
-                val datas = JSONObject(raw).optJSONObject("datas") ?: return@runCatching null
-                val node = datas.opt("xskcb") ?: return@runCatching null
+            val blankRoomRows: List<String> = runCatching {
+                val datas = JSONObject(raw).optJSONObject("datas") ?: return@runCatching emptyList()
+                val node = datas.opt("xskcb") ?: return@runCatching emptyList()
                 val rows = when (node) {
                     is org.json.JSONArray -> node
                     is JSONObject -> node.optJSONArray("rows")
                     else -> null
-                } ?: return@runCatching null
+                } ?: return@runCatching emptyList()
                 (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }
                     .filter { r ->
                         val room = r.optString("JASMC", "").ifBlank { r.optString("JSMC", "") }
