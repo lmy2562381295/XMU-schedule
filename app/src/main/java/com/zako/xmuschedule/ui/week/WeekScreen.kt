@@ -91,7 +91,7 @@ fun WeekScreen(onGoImport: () -> Unit) {
             }
         } else {
             val today = LocalDate.now()
-            val gridHeight = state.sections.size * ROW_HEIGHT.value * 1.dp
+            val gridHeight = ROW_HEIGHT * state.sections.size
 
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 // 表头：星期 + 日期
@@ -149,7 +149,7 @@ fun WeekScreen(onGoImport: () -> Unit) {
                                 val gap = (course.startSection - cursor).coerceAtLeast(0)
                                 if (gap > 0) {
                                     GapBlock(
-                                        height = gap * ROW_HEIGHT,
+                                        height = ROW_HEIGHT * gap,
                                         firstSection = cursor,
                                         onPick = { section -> prefill = dow to section },
                                     )
@@ -157,14 +157,14 @@ fun WeekScreen(onGoImport: () -> Unit) {
                                 val span = (course.endSection - course.startSection + 1).coerceAtLeast(1)
                                 CourseBlock(
                                     course = course,
-                                    height = span * ROW_HEIGHT,
+                                    height = ROW_HEIGHT * span,
                                     onClick = { editing = course },
                                 )
                                 cursor = course.endSection + 1
                             }
                             if (cursor <= state.sections.size) {
                                 GapBlock(
-                                    height = (state.sections.size - cursor + 1) * ROW_HEIGHT,
+                                    height = ROW_HEIGHT * (state.sections.size - cursor + 1),
                                     firstSection = cursor,
                                     onPick = { section -> prefill = dow to section },
                                 )
