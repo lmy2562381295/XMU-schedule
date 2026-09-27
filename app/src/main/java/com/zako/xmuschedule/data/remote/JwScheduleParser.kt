@@ -53,7 +53,17 @@ object JwScheduleParser {
             unrecognized += "返回中未找到 datas.xskcb 数组"
         }
         val semester = root.optJSONObject("datas")?.optString("xnxqdm")?.takeIf { it.isNotBlank() }
-        return ScheduleParseResult(mergeContiguous(courses), unrecognized, body, semester)
+        val merged = mergeContiguous(courses)
+        // 无教室（线上/占位）行若与同一天的实体课时间重叠且周次重叠，视为占位重复行去除
+        val physicalRows = merged.filter { it.room.isNotBlank() }
+        val finalCourses = merged.filter { course ->
+            course.room.isNotBlank() || physicalRows.none { p ->
+                p.dayOfWeek == course.dayOfWeek &&
+                    course.startSection <= p.endSection && p.startSection <= course.endSection &&
+                    course.weeks.intersect(p.weeks).isNotEmpty()
+            }
+        }
+        return ScheduleParseResult(finalCourses, unrecognized, body, semester)
     }
 
     /**
