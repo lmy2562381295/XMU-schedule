@@ -55,6 +55,11 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private val _state = MutableStateFlow<ImportUiState>(ImportUiState.Idle)
+    val state: StateFlow<ImportUiState> = _state.asStateFlow()
+
+    fun semesterCodeGuess(): String = TimeUtils.guessSemesterCode()
+
     fun startImport(code: String?, studentNo: String?) {
         pendingCode = code
         studentId = studentNo
