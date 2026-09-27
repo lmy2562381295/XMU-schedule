@@ -68,17 +68,18 @@ object JwScheduleParser {
     }
 
     private fun parseRow(row: JSONObject): ParsedCourse? {
-        val name = firstNonBlank(row, "KCM", "KCZWMC", "KCMC", "KCMC_1") ?: return null
-        val day = firstIntInRange(row, 1..7, "XQJ", "XQ", "WEEKDAY", "XQJDM") ?: return null
-        val sections = SectionsParser.parse(firstNonBlank(row, "JC", "JCDM", "JC_", "JIECI")) ?: return null
-        val weeksText = firstNonBlank(row, "SKZC", "ZC", "ZCBH", "ZCZ", "QSZC", "WEEKS")
-        val weeks = WeeksParser.parse(weeksText)
+        val name = firstNonBlank(row, "KCM", "KCZWMC", "KCMC") ?: return null
+        val day = firstIntInRange(row, 1..7, "SKXQ", "XQJ", "XQ", "WEEKDAY", "XQJDM") ?: return null
+        val sections = parseSections(row) ?: return null
+        val weeksBitmap = firstNonBlank(row, "SKZC")
+        val weeksDisplay = firstNonBlank(row, "ZCMC", "ZC", "ZCBH", "ZCZ", "QSZC", "WEEKS")
+        val weeks = WeeksParser.parse(weeksBitmap ?: weeksDisplay)
         if (weeks.isEmpty()) return null
         val teacher = firstNonBlank(row, "SKJS", "JSMC", "JSXM", "TEACHER") ?: ""
-        val campus = firstNonBlank(row, "XQMC", "CAMPUS", "XQ") ?: ""
+        val campus = firstNonBlank(row, "XQMC", "XXXQDM_DISPLAY", "CAMPUS", "XQ") ?: ""
         val room = listOfNotNull(
-            firstNonBlank(row, "JXL"),
             firstNonBlank(row, "JASMC"),
+            firstNonBlank(row, "JXL"),
         ).filter { it.isNotBlank() }.joinToString(" ").ifBlank {
             firstNonBlank(row, "JSMC", "ROOM") ?: ""
         }
@@ -89,10 +90,19 @@ object JwScheduleParser {
             startSection = sections.first,
             endSection = sections.second,
             weeks = weeks,
-            weeksText = weeksText?.trim() ?: "",
+            weeksText = (weeksDisplay ?: weeksBitmap ?: "").trim(),
             campus = campus.trim(),
             room = room.trim(),
         )
+    }
+
+    /** 节次：优先合并字段（JC），否则用分离的起止字段（厦大新版 KSJC/JSJC） */
+    private fun parseSections(row: JSONObject): Pair<Int, Int>? {
+        SectionsParser.parse(firstNonBlank(row, "JC", "JCDM", "JIECI"))?.let { return it }
+        val start = firstIntInRange(row, 1..20, "KSJC", "KSJC_DM") ?: return null
+        val end = firstIntInRange(row, 1..20, "JSJC", "JSJC_DM") ?: return null
+        if (end < start) return null
+        return start to end
     }
 
     private fun firstNonBlank(row: JSONObject, vararg keys: String): String? {
