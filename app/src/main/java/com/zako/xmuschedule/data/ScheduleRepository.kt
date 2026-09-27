@@ -11,6 +11,7 @@ import com.zako.xmuschedule.util.TimeUtils
 import com.zako.xmuschedule.util.WeeksParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.File
 import java.time.LocalDate
 
@@ -60,7 +61,7 @@ class ScheduleRepository(private val context: Context) {
                 "页面内导入: 学期=$semesterCode 课程=${parsed.courses.size} 未识别=${parsed.unrecognized.size}",
             )
             // 无教室的行完整打进日志（教室可能藏在别的字段名里）
-            val blankRoomRows = runCatching {
+            val blankRoomRows: List<String> = runCatching {
                 val datas = JSONObject(raw).optJSONObject("datas") ?: return@runCatching null
                 val node = datas.opt("xskcb") ?: return@runCatching null
                 val rows = when (node) {
