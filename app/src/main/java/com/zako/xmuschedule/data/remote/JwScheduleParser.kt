@@ -78,7 +78,7 @@ object JwScheduleParser {
                     acc = acc.copy(
                         endSection = maxOf(acc.endSection, cur.endSection),
                         weeks = acc.weeks + cur.weeks,
-                        room = acc.room.ifBlank { cur.room },
+                        room = mergeRooms(listOf(acc.room, cur.room)),
                     )
                 } else {
                     merged.add(acc)
@@ -118,12 +118,14 @@ object JwScheduleParser {
         ).filter { it.isNotBlank() }.joinToString(" ").ifBlank {
             firstNonBlank(row, "JSMC", "ROOM") ?: ""
         }
-        // 教室缺失时从 YPSJDD（"1-16周 星期一 第5节-第6节 坤銮楼（2号楼）A402,..."）兜底提取
+        // 教室缺失时从 YPSJDD（"1-16周 星期一 第5节-第6节 坤銮楼（2号楼）A402,..." 或 "2-16双周 星期一[7-8节]西部片区4号楼106"）兜底提取
         if (room.isBlank()) {
             val ypsjdd = firstNonBlank(row, "YPSJDD")
             if (ypsjdd != null) {
                 val firstMeeting = ypsjdd.split(',').firstOrNull().orEmpty()
-                room = firstMeeting.substringAfterLast("节").trim()
+                // 兼容 "第5节-第6节 教室" 与 "[7-8节]教室" 两种写法，取节次标记之后的教室文本
+                val tail = firstMeeting.substringAfterLast("节")
+                room = tail.trimStart(']', '）', ')', ' ', '　')
                 if (campus.isBlank()) campus = firstMeeting.substringAfter("星期", "").trim()
             }
         }
@@ -165,5 +167,23 @@ object JwScheduleParser {
             if (v != null && v in range) return v
         }
         return null
+    }
+
+    /** 多教室合并展示：同楼不同室压缩为 "文宣楼（4号楼）B404/B405"，否则用顿号并列 */
+    private fun mergeRooms(rooms: List<String>): String {
+        val distinct = rooms.filter { it.isNotBlank() }.distinct()
+        if (distinct.size <= 1) return distinct.firstOrNull().orEmpty()
+        var prefix = distinct.first()
+        for (other in distinct.drop(1)) {
+            while (prefix.isNotEmpty() && !other.startsWith(prefix)) {
+                prefix = prefix.dropLast(1)
+            }
+        }
+        if (prefix.length >= 3) {
+            val rests = distinct.map { it.removePrefix(prefix) }
+            val simple = rests.all { r -> r.length <= 6 && !r.contains('（') && !r.contains('(') }
+            if (simple) return prefix + rests.joinToString("/")
+        }
+        return distinct.joinToString("、")
     }
 }
