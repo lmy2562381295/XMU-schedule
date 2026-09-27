@@ -137,7 +137,8 @@ fun ImportScreen(onClose: () -> Unit) {
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
-                    )                    OutlinedTextField(
+                    )
+                    OutlinedTextField(
                         value = semesterInput,
                         onValueChange = { semesterInput = it },
                         label = { Text("学期代码（选填，如 ${viewModel.semesterCodeGuess()}）") },
