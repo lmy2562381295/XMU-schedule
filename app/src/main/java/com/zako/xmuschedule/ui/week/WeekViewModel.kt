@@ -29,10 +29,8 @@ data class WeekUiState(
     val days: List<LocalDate> = emptyList(),
     val sections: List<Int> = emptyList(),
     val times: Map<Int, PeriodTimeEntity> = emptyMap(),
-    /** (星期, 节次) → 在该节开课的课程 */
-    val startCells: Map<Pair<Int, Int>, CourseEntity> = emptyMap(),
-    /** 被课程占用的所有格子（含延续节次） */
-    val occupied: Set<Pair<Int, Int>> = emptySet(),
+    /** 星期(1..7) → 当天按起始节排序的课程（所选周内实际有课的） */
+    val dayCourses: Map<Int, List<CourseEntity>> = emptyMap(),
 )
 
 class WeekViewModel(app: Application) : AndroidViewModel(app) {
@@ -67,16 +65,10 @@ class WeekViewModel(app: Application) : AndroidViewModel(app) {
         val maxSection = periods.maxOfOrNull { it.section } ?: 12
         val sections = (1..maxSection.coerceAtLeast(1)).toList()
 
-        val startCells = mutableMapOf<Pair<Int, Int>, CourseEntity>()
-        val occupied = mutableSetOf<Pair<Int, Int>>()
-        for (course in courses) {
-            // 只显示所选周次实际上课的安排
-            if (!course.weekNumbers().contains(weekNo)) continue
-            for (s in course.startSection..course.endSection) {
-                val key = course.dayOfWeek to s
-                if (s == course.startSection) startCells[key] = course
-                occupied += key
-            }
+        // 只显示所选周次实际上课的安排，按天分组、按起始节排序（供跨节次块布局使用）
+        val weekCourses = courses.filter { it.weekNumbers().contains(weekNo) }
+        val dayCourses = (1..7).associateWith { dow ->
+            weekCourses.filter { it.dayOfWeek == dow }.sortedBy { it.startSection }
         }
         return WeekUiState(
             needsConfig = false,
@@ -87,8 +79,7 @@ class WeekViewModel(app: Application) : AndroidViewModel(app) {
             days = days,
             sections = sections,
             times = periods.associateBy { it.section },
-            startCells = startCells,
-            occupied = occupied,
+            dayCourses = dayCourses,
         )
     }
 

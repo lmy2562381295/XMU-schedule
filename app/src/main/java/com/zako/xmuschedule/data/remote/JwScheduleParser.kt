@@ -52,7 +52,30 @@ object JwScheduleParser {
             unrecognized += "返回中未找到 datas.xskcb 数组"
         }
         val semester = root.optJSONObject("datas")?.optString("xnxqdm")?.takeIf { it.isNotBlank() }
-        return ScheduleParseResult(courses, unrecognized, body, semester)
+        return ScheduleParseResult(mergeContiguous(courses), unrecognized, body, semester)
+    }
+
+    /** 同一门课相邻节次常被拆成多行（如 7-7 与 8-8），合并为连续跨度 */
+    private fun mergeContiguous(courses: List<ParsedCourse>): List<ParsedCourse> {
+        val merged = mutableListOf<ParsedCourse>()
+        val groups = courses.groupBy {
+            listOf(it.name, it.teacher, it.dayOfWeek.toString(), it.weeks.toString(), it.room, it.campus)
+        }
+        for (group in groups.values) {
+            val sorted = group.sortedBy { it.startSection }
+            var acc = sorted.first()
+            for (i in 1 until sorted.size) {
+                val cur = sorted[i]
+                if (cur.startSection <= acc.endSection + 1) {
+                    acc = acc.copy(endSection = maxOf(acc.endSection, cur.endSection))
+                } else {
+                    merged.add(acc)
+                    acc = cur
+                }
+            }
+            merged.add(acc)
+        }
+        return merged.sortedWith(compareBy({ it.dayOfWeek }, { it.startSection }))
     }
 
     private fun extractRows(root: JSONObject): JSONArray? {

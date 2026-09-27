@@ -29,11 +29,14 @@ abstract class AppDatabase : RoomDatabase() {
                 ).build().also { instance = it }
             }
 
-        /** 首次启动时写入默认节次时间表 */
+        /** 启动时保证节次表存在；默认表版本升级时自动覆盖（用户可在设置里再改） */
         suspend fun ensureDefaultPeriods(context: Context) {
             val dao = get(context).periodTimeDao()
-            if (dao.allNow().isEmpty()) {
+            val storedVersion = com.zako.xmuschedule.data.Prefs.periodsVersion(context)
+            if (dao.allNow().isEmpty() || storedVersion < DEFAULT_PERIODS_VERSION) {
+                dao.clear()
                 dao.upsertAll(defaultPeriodTimes())
+                com.zako.xmuschedule.data.Prefs.setPeriodsVersion(context, DEFAULT_PERIODS_VERSION)
             }
         }
     }

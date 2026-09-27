@@ -2,7 +2,7 @@ package com.zako.xmuschedule.ui.week
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,6 +47,8 @@ import com.zako.xmuschedule.ui.theme.colorForCourse
 import java.time.LocalDate
 
 private val dayNames = listOf("一", "二", "三", "四", "五", "六", "日")
+private val TIME_COL = 44.dp
+private val ROW_HEIGHT = 52.dp
 
 @Composable
 fun WeekScreen(onGoImport: () -> Unit) {
@@ -86,6 +91,8 @@ fun WeekScreen(onGoImport: () -> Unit) {
             }
         } else {
             val today = LocalDate.now()
+            val gridHeight = state.sections.size * ROW_HEIGHT.value * 1.dp
+
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 // 表头：星期 + 日期
                 Row(Modifier.fillMaxWidth()) {
@@ -95,7 +102,7 @@ fun WeekScreen(onGoImport: () -> Unit) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.weight(1f).background(
-                                if (isToday) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else androidx.compose.ui.graphics.Color.Transparent
+                                if (isToday) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else Color.Transparent
                             ),
                         ) {
                             Text(
@@ -113,64 +120,62 @@ fun WeekScreen(onGoImport: () -> Unit) {
                     }
                 }
 
-                // 课程网格
-                state.sections.forEach { section ->
-                    Row(Modifier.fillMaxWidth().height(ROW_HEIGHT)) {
-                        Box(Modifier.width(TIME_COL), contentAlignment = Alignment.Center) {
-                            val time = state.times[section]?.startTime ?: ""
-                            Text(time.removePrefix("0"), fontSize = 9.sp, color = MaterialTheme.colorScheme.outline)
+                // 网格主体：左侧时间轴 + 每天一列（课程块纵向跨满所占据的节次）
+                Row(Modifier.fillMaxWidth().height(gridHeight)) {
+                    Column(Modifier.width(TIME_COL)) {
+                        state.sections.forEach { section ->
+                            Box(Modifier.height(ROW_HEIGHT), contentAlignment = Alignment.Center) {
+                                Text(
+                                    state.times[section]?.startTime?.removePrefix("0").orEmpty(),
+                                    fontSize = 9.sp,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
                         }
-                        (1..7).forEach { day ->
-                            val key = day to section
-                            val course = state.startCells[key]
-                            val isOccupied = key in state.occupied
-                            Box(
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxSize()
-                                    .padding(1.dp)
-                                    .background(
-                                        color = when {
-                                            course != null -> colorForCourse(course.name).copy(alpha = 0.85f)
-                                            isOccupied -> androidx.compose.ui.graphics.Color.Transparent
-                                            else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                                        },
-                                        shape = RoundedCornerShape(4.dp),
+                    }
+                    state.days.forEachIndexed { index, date ->
+                        val dow = date.dayOfWeek.value
+                        val isToday = date == today && state.isCurrentWeek
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .height(gridHeight)
+                                .background(
+                                    if (isToday) MaterialTheme.colorScheme.primary.copy(alpha = 0.06f) else Color.Transparent
+                                ),
+                        ) {
+                            var cursor = 1
+                            state.dayCourses[dow].orEmpty().forEach { course ->
+                                val gap = (course.startSection - cursor).coerceAtLeast(0)
+                                if (gap > 0) {
+                                    GapBlock(
+                                        height = gap * ROW_HEIGHT,
+                                        firstSection = cursor,
+                                        onPick = { section -> prefill = dow to section },
                                     )
-                                    .clickable(enabled = !isOccupied || course != null) {
-                                        if (course != null) editing = course
-                                        else prefill = day to section
-                                    },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (course != null) {
-                                    Column(Modifier.padding(2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            course.name,
-                                            fontSize = 9.sp,
-                                            lineHeight = 10.sp,
-                                            color = androidx.compose.ui.graphics.Color.White,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                        if (course.room.isNotBlank()) {
-                                            Text(
-                                                course.room,
-                                                fontSize = 8.sp,
-                                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                        }
-                                    }
                                 }
+                                val span = (course.endSection - course.startSection + 1).coerceAtLeast(1)
+                                CourseBlock(
+                                    course = course,
+                                    height = span * ROW_HEIGHT,
+                                    onClick = { editing = course },
+                                )
+                                cursor = course.endSection + 1
+                            }
+                            if (cursor <= state.sections.size) {
+                                GapBlock(
+                                    height = (state.sections.size - cursor + 1) * ROW_HEIGHT,
+                                    firstSection = cursor,
+                                    onPick = { section -> prefill = dow to section },
+                                )
                             }
                         }
                     }
                 }
+
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "点击空格可手动添加课程，点击色块可编辑/删除",
+                    "点击空白处可手动添加课程，点击课程块可编辑/删除",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(horizontal = 8.dp),
@@ -195,5 +200,66 @@ fun WeekScreen(onGoImport: () -> Unit) {
     }
 }
 
-private val TIME_COL = 44.dp
-private val ROW_HEIGHT = 52.dp
+/** 空闲格子：按点击位置换算出节次，用于手动添加课程 */
+@Composable
+private fun GapBlock(height: androidx.compose.ui.unit.Dp, firstSection: Int, onPick: (Int) -> Unit) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(height)
+            .padding(1.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            .pointerInput(firstSection) {
+                detectTapGestures { offset ->
+                    val picked = firstSection + (offset.y / ROW_HEIGHT.value).toInt()
+                    onPick(picked)
+                }
+            },
+    )
+}
+
+/** 课程块：跨满所占据的节次，展示课程名、教室、老师 */
+@Composable
+private fun CourseBlock(course: CourseEntity, height: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+    val color = colorForCourse(course.name)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .height(height)
+            .padding(1.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(color.copy(alpha = 0.88f))
+            .clickable(onClick = onClick)
+            .padding(4.dp),
+        verticalArrangement = Arrangement.Top,
+    ) {
+        Text(
+            course.name,
+            fontSize = 9.sp,
+            lineHeight = 10.sp,
+            color = Color.White,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (course.room.isNotBlank()) {
+            Text(
+                course.room,
+                fontSize = 8.sp,
+                color = Color.White.copy(alpha = 0.92f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (course.teacher.isNotBlank()) {
+            Text(
+                course.teacher,
+                fontSize = 8.sp,
+                color = Color.White.copy(alpha = 0.85f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
