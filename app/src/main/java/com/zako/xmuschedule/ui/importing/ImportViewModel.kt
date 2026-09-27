@@ -33,9 +33,9 @@ sealed interface ImportUiState {
 }
 
 /**
- * 页面内导入流程（与参考实现同构）：
- * WebView 打开 CAS 登录（service=应用入口）→ 登录完成后 WebView 停留在教务应用页 →
- * 直接在该页面里用 fetch() 调 jwapp 接口取课表（同源、自动带会话），绕开 cookie 同步问题。
+ * 页面内导入流程：WebView 登录后停留在教务应用页，直接在页面里用 fetch() 调 jwapp 接口。
+ * 由于各校金智框架的参数形态不一（requestJson 表单 / JSON 体 / 直代表单），
+ * 对每个学期候选自动轮换请求形态，以服务端返回为准。
  */
 class ImportViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -55,11 +55,6 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private val _state = MutableStateFlow<ImportUiState>(ImportUiState.Idle)
-    val state: StateFlow<ImportUiState> = _state.asStateFlow()
-
-    fun semesterCodeGuess(): String = TimeUtils.guessSemesterCode()
-
     fun startImport(code: String?, studentNo: String?) {
         pendingCode = code
         studentId = studentNo
@@ -76,7 +71,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         webView = null
     }
 
-    /** WebView 层判定登录流程已就绪（SAAS_U 出现或已落到教务首页） */
+    /** WebView 层判定登录流程已就绪（进入教务应用页） */
     fun onWebReady() {
         if (_state.value == ImportUiState.WebImporting) return
         transition(ImportUiState.WebImporting, "web ready")
@@ -87,6 +82,12 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         AppLog.event(getApplication(), "import", "state -> ${s::class.simpleName} ($reason)")
         _state.value = s
     }
+
+    private data class ReqShape(val label: String, val body: String, val contentType: String)
+
+    private fun requestObject(sid: String, code: String): String =
+        if (sid.isBlank()) "{\"XNXQDM\":\"$code\"}"
+        else "{\"XNXQDM\":\"$code\",\"XH\":\"$sid\"}"
 
     private suspend fun webImport() {
         val app = getApplication<Application>()
@@ -103,56 +104,59 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
             autoCode?.let { candidates.add(it) }
             candidates.add(TimeUtils.guessSemesterCode())
 
+            val sid = studentId.orEmpty().trim()
             val url = JwUrls.BASE + JwUrls.XSKCB
-            for (code in candidates) {
-                // 该接口要求同时提供 XH（学号）与 XNXQDM（学期代码）
-                val requestObj = buildString {
-                    append("{\"XNXQDM\":\"").append(code).append("\"")
-                    studentId?.takeIf { it.isNotBlank() }?.let {
-                        append(",\"XH\":\"").append(it.trim()).append("\"")
-                    }
-                    append("}")
-                }
-                val body = "requestJson=" + Uri.encode(requestObj)
-                AppLog.event(
-                    app, "import",
-                    "取数请求: 学期=$code 携带学号=${studentId?.takeIf { it.isNotBlank() } != null}",
+            var done = false
+            var lastMsg = ""
+
+            outer@ for (code in candidates) {
+                val shapes = listOf(
+                    ReqShape("表单requestJson", "requestJson=" + Uri.encode(requestObject(sid, code)), FORM_CT),
+                    ReqShape("JSON体", requestObject(sid, code), "application/json; charset=UTF-8"),
+                    ReqShape("直代表单", "XH=" + Uri.encode(sid) + "&XNXQDM=" + Uri.encode(code), FORM_CT),
                 )
-                var raw = ""
-                var attempt = 0
-                while (attempt < 2) {
-                    attempt += 1
-                    raw = inPageFetch(wv, url, body)
+                for (shape in shapes) {
+                    val raw = inPageFetch(wv, url, shape.body, shape.contentType)
                     AppLog.event(
                         app, "import",
-                        "取数 学期=$code 第${attempt}次: len=${raw.length} 正文=${raw.take(400).replace('\n', ' ')}",
+                        "取数 学期=$code 形态=${shape.label}: len=${raw.length} 正文=${raw.take(400).replace('\n', ' ')}",
                     )
-                    if (raw.trimStart().startsWith("{")) break
-                    delay(2500)
-                }
-                if (!raw.trimStart().startsWith("{")) continue
-
-                val parsed = JwScheduleParser.parse(raw)
-                if (parsed.courses.isEmpty()) {
-                    AppLog.event(app, "import", "学期=$code 返回 0 条课程，尝试下一候选")
-                    continue
-                }
-                when (val result = repo.applyWebImport(raw, code)) {
-                    is ImportResult.Success -> {
-                        ReminderScheduler.scheduleWindow(app)
-                        transition(ImportUiState.Done(result.count, result.unrecognized, result.semester), "success")
+                    if (!raw.trimStart().startsWith("{")) continue
+                    lastMsg = extractExtMsg(raw)
+                    val parsed = JwScheduleParser.parse(raw)
+                    if (parsed.courses.isEmpty()) {
+                        if (lastMsg.contains("不能为空")) {
+                            // 该形态下服务端没读到参数，换下一种形态
+                            continue
+                        }
+                        // 形态已被接受但该学期没有数据，换下一学期候选
+                        AppLog.event(app, "import", "学期=$code 形态=${shape.label} 参数被接受但返回 0 条课程")
+                        continue@outer
                     }
-                    is ImportResult.Failure -> transition(ImportUiState.Error(result.message), "failure")
+                    when (val result = repo.applyWebImport(raw, code)) {
+                        is ImportResult.Success -> {
+                            ReminderScheduler.scheduleWindow(app)
+                            transition(
+                                ImportUiState.Done(result.count, result.unrecognized, result.semester),
+                                "success",
+                            )
+                            done = true
+                        }
+                        is ImportResult.Failure -> transition(ImportUiState.Error(result.message), "failure")
+                    }
+                    break@outer
                 }
-                return
             }
-            transition(
-                ImportUiState.Error(
-                    "所有学期候选均未取到课程（尝试：${candidates.joinToString("、")}）。" +
-                        "可能是学期代码格式与学校不一致——请把运行日志发我，日志里有学期列表接口的原始返回，可据此修正。"
-                ),
-                "empty all",
-            )
+
+            if (!done) {
+                transition(
+                    ImportUiState.Error(
+                        "多种参数形态与学期候选均未取到课程。服务端最后消息：${lastMsg.ifBlank { "（无）" }}" +
+                            "——请把运行日志发我，日志里有每次请求的完整返回。"
+                    ),
+                    "empty all",
+                )
+            }
         } catch (t: Throwable) {
             AppLog.error(app, "import", t)
             transition(
@@ -170,6 +174,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 wv,
                 JwUrls.BASE + JwUrls.XNXQDM,
                 "requestJson=" + Uri.encode("""{"XN":"$year"}"""),
+                FORM_CT,
             )
             AppLog.event(getApplication(), "import", "学期接口返回: ${resp.take(300).replace('\n', ' ')}")
             if (!resp.trimStart().startsWith("{")) {
@@ -183,6 +188,17 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private fun extractExtMsg(body: String): String = runCatching {
+        val root = JSONObject(body)
+        val node = root.optJSONObject("datas")?.opt("xskcb")
+        val obj = when (node) {
+            is JSONObject -> node
+            is org.json.JSONArray -> node.optJSONObject(0)
+            else -> null
+        }
+        obj?.optJSONObject("extParams")?.optString("msg").orEmpty()
+    }.getOrDefault("")
+
     private fun extractSemesterCode(body: String, yearHint: String): String? = runCatching {
         val root = JSONObject(body)
         val datas = root.optJSONObject("datas") ?: return@runCatching null
@@ -195,12 +211,12 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
     }.getOrNull()
 
     /** 在 WebView 当前页面（同源）里发 fetch，结果经 ZakoBridge 推回（不依赖 evaluateJavascript 回传值） */
-    private suspend fun inPageFetch(wv: WebView, url: String, body: String): String {
+    private suspend fun inPageFetch(wv: WebView, url: String, body: String, contentType: String): String {
         val gate = CompletableDeferred<String>()
         pendingGate = gate
         withContext(Dispatchers.Main) {
             val js = "(function(){ try { fetch('$url', {method:'POST',credentials:'include'," +
-                "headers:{'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}," +
+                "headers:{'X-Requested-With':'XMLHttpRequest','Content-Type':'$contentType'}," +
                 "body:'$body'})" +
                 ".then(function(r){ return r.text().then(function(t){ return JSON.stringify({status:r.status,text:t.substring(0,200000)}); }); })" +
                 ".then(function(p){ ZakoBridge.postResult(p); })" +
@@ -220,5 +236,9 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         val text = parsed?.optString("text").orEmpty()
         AppLog.event(getApplication(), "webview", "页面内 fetch: status=$status len=${text.length}")
         return text
+    }
+
+    private companion object {
+        const val FORM_CT = "application/x-www-form-urlencoded; charset=UTF-8"
     }
 }
