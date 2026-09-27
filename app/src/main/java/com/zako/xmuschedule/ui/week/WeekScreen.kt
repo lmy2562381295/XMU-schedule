@@ -247,8 +247,9 @@ private fun CourseBlock(course: CourseEntity, height: androidx.compose.ui.unit.D
             Text(
                 course.room,
                 fontSize = 8.sp,
+                lineHeight = 9.sp,
                 color = Color.White.copy(alpha = 0.92f),
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

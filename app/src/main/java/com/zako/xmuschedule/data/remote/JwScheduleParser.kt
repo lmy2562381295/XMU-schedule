@@ -22,6 +22,7 @@ object JwScheduleParser {
         val weeksText: String,
         val campus: String,
         val room: String,
+        val jxbid: String? = null,
     )
 
     data class ScheduleParseResult(
@@ -55,11 +56,17 @@ object JwScheduleParser {
         return ScheduleParseResult(mergeContiguous(courses), unrecognized, body, semester)
     }
 
-    /** 同一门课相邻节次常被拆成多行（如 7-7 与 8-8），合并为连续跨度 */
+    /**
+     * 同一门课相邻节次常被拆成多行。优先按 教学班ID(JXBID)+星期 分组合并（不受教室/周次字段差异影响），
+     * 无 JXBID 时退回 名称+教师+星期。合并时周次取并集。
+     */
     private fun mergeContiguous(courses: List<ParsedCourse>): List<ParsedCourse> {
         val merged = mutableListOf<ParsedCourse>()
         val groups = courses.groupBy {
-            listOf(it.name, it.teacher, it.dayOfWeek.toString(), it.weeks.toString(), it.room, it.campus)
+            listOf(
+                it.jxbid?.takeIf { j -> j.isNotBlank() } ?: (it.name + "|" + it.teacher),
+                it.dayOfWeek.toString(),
+            )
         }
         for (group in groups.values) {
             val sorted = group.sortedBy { it.startSection }
@@ -67,7 +74,11 @@ object JwScheduleParser {
             for (i in 1 until sorted.size) {
                 val cur = sorted[i]
                 if (cur.startSection <= acc.endSection + 1) {
-                    acc = acc.copy(endSection = maxOf(acc.endSection, cur.endSection))
+                    acc = acc.copy(
+                        endSection = maxOf(acc.endSection, cur.endSection),
+                        weeks = acc.weeks + cur.weeks,
+                        room = acc.room.ifBlank { cur.room },
+                    )
                 } else {
                     merged.add(acc)
                     acc = cur
@@ -99,12 +110,21 @@ object JwScheduleParser {
         val weeks = WeeksParser.parse(weeksBitmap ?: weeksDisplay)
         if (weeks.isEmpty()) return null
         val teacher = firstNonBlank(row, "SKJS", "JSMC", "JSXM", "TEACHER") ?: ""
-        val campus = firstNonBlank(row, "XQMC", "XXXQDM_DISPLAY", "CAMPUS", "XQ") ?: ""
-        val room = listOfNotNull(
+        var campus = firstNonBlank(row, "XQMC", "XXXQDM_DISPLAY", "CAMPUS", "XQ") ?: ""
+        var room = listOfNotNull(
             firstNonBlank(row, "JASMC"),
             firstNonBlank(row, "JXL"),
         ).filter { it.isNotBlank() }.joinToString(" ").ifBlank {
             firstNonBlank(row, "JSMC", "ROOM") ?: ""
+        }
+        // 教室缺失时从 YPSJDD（"1-16周 星期一 第5节-第6节 坤銮楼（2号楼）A402,..."）兜底提取
+        if (room.isBlank()) {
+            val ypsjdd = firstNonBlank(row, "YPSJDD")
+            if (ypsjdd != null) {
+                val firstMeeting = ypsjdd.split(',').firstOrNull().orEmpty()
+                room = firstMeeting.substringAfterLast("节").trim()
+                if (campus.isBlank()) campus = firstMeeting.substringAfter("星期", "").trim()
+            }
         }
         return ParsedCourse(
             name = name.trim(),
@@ -116,6 +136,7 @@ object JwScheduleParser {
             weeksText = (weeksDisplay ?: weeksBitmap ?: "").trim(),
             campus = campus.trim(),
             room = room.trim(),
+            jxbid = firstNonBlank(row, "JXBID"),
         )
     }
 

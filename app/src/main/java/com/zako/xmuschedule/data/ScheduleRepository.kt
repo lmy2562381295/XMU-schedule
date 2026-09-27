@@ -59,6 +59,13 @@ class ScheduleRepository(private val context: Context) {
                 context, "repo",
                 "页面内导入: 学期=$semesterCode 课程=${parsed.courses.size} 未识别=${parsed.unrecognized.size}",
             )
+            // 导入明细（便于远程核对合并与字段解析结果）
+            val dayNames = listOf("一", "二", "三", "四", "五", "六", "日")
+            val detail = parsed.courses.joinToString("；") {
+                "${it.name} 周${dayNames[it.dayOfWeek - 1]} ${it.startSection}-${it.endSection}节 " +
+                    "周${it.weeks.min()}-${it.weeks.max()} ${it.room.ifBlank { "无教室" }}"
+            }
+            AppLog.event(context, "repo", "导入明细: ${detail.take(1500)}")
             saveRawDump(raw, semesterCode)
             if (parsed.courses.isEmpty()) {
                 ImportResult.Failure(
