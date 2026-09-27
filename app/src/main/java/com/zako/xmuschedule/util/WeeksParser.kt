@@ -8,7 +8,18 @@ object WeeksParser {
 
     fun parse(text: String?, defaultRange: IntRange = 1..20): Set<Int> {
         if (text.isNullOrBlank()) return defaultRange.toSet()
-        var s = text.replace("（", "(").replace("）", ")").replace("周", "").trim()
+        val trimmed = text.trim()
+
+        // 位图格式（厦大新版金智）："111111111111111100" 每位代表该周是否有课
+        if (trimmed.length in 10..40 && trimmed.all { it == '0' || it == '1' }) {
+            val weeks = sortedSetOf<Int>()
+            trimmed.forEachIndexed { index, c ->
+                if (c == '1') weeks.add(index + 1)
+            }
+            if (weeks.isNotEmpty()) return weeks
+        }
+
+        var s = trimmed.replace("（", "(").replace("）", ")").replace("周", "").trim()
 
         var parity: Int? = null // 1=单周 0=双周
         val paren = Regex("\\(([^)]*)\\)").find(s)

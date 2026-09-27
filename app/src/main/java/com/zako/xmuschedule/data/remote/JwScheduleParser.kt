@@ -71,7 +71,7 @@ object JwScheduleParser {
         val name = firstNonBlank(row, "KCM", "KCZWMC", "KCMC", "KCMC_1") ?: return null
         val day = firstIntInRange(row, 1..7, "XQJ", "XQ", "WEEKDAY", "XQJDM") ?: return null
         val sections = SectionsParser.parse(firstNonBlank(row, "JC", "JCDM", "JC_", "JIECI")) ?: return null
-        val weeksText = firstNonBlank(row, "ZC", "ZCBH", "ZCZ", "QSZC", "WEEKS")
+        val weeksText = firstNonBlank(row, "SKZC", "ZC", "ZCBH", "ZCZ", "QSZC", "WEEKS")
         val weeks = WeeksParser.parse(weeksText)
         if (weeks.isEmpty()) return null
         val teacher = firstNonBlank(row, "SKJS", "JSMC", "JSXM", "TEACHER") ?: ""

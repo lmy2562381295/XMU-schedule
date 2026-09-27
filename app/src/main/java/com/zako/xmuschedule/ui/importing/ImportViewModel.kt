@@ -130,6 +130,18 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                     lastMsg = extractExtMsg(raw)
                     val parsed = JwScheduleParser.parse(raw)
                     if (parsed.courses.isEmpty()) {
+                        // 记录首条记录的完整字段，便于远程适配字段名
+                        val firstRow = runCatching {
+                            val xskcb = JSONObject(raw).optJSONObject("datas")?.opt("xskcb")
+                            when (xskcb) {
+                                is org.json.JSONArray -> xskcb.optJSONObject(0)?.toString()
+                                is JSONObject -> xskcb.optJSONArray("rows")?.optJSONObject(0)?.toString()
+                                else -> null
+                            }
+                        }.getOrNull()
+                        if (firstRow != null) {
+                            AppLog.event(app, "import", "首行完整字段: $firstRow")
+                        }
                         if (lastMsg.contains("不能为空")) {
                             // 该形态下服务端没读到参数，换下一种形态
                             continue
