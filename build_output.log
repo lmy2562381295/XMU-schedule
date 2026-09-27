@@ -15,50 +15,35 @@ Daemon will be stopped at the end of the build
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:compressDebugAssets
 > Task :app:desugarDebugFileDependencies
+> Task :app:compressDebugAssets
 > Task :app:mergeDebugStartupProfile
 > Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugNativeLibs
-> Task :app:processDebugManifestForPackage
+> Task :app:processDebugResources
 > Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so.
 
-> Task :app:processDebugResources
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
-> Task :app:mergeExtDexDebug
 > Task :app:kspDebugKotlin
+> Task :app:mergeExtDexDebug
 
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/data/remote/JwClient.kt:131:65 'fun parse(mediaType: String): MediaType?' is deprecated. moved to extension function.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/reminder/AlarmReceiver.kt:31:21 Unresolved reference 'not' for operator '!'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/reminder/AlarmReceiver.kt:31:29 Unresolved reference 'weekNumbers'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/reminder/ReminderScheduler.kt:57:21 Unresolved reference 'not' for operator '!'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/reminder/ReminderScheduler.kt:57:29 Unresolved reference 'weekNumbers'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/reminder/ReminderScheduler.kt:60:91 The feature "break continue in inline lambdas" is experimental and should be enabled explicitly
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/AppRoot.kt:7:60 Unresolved reference 'Today'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/AppRoot.kt:37:62 Unresolved reference 'Today'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/edit/CourseEditDialog.kt:7:43 Unresolved reference 'rememberScrollState'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/edit/CourseEditDialog.kt:8:43 Unresolved reference 'verticalScroll'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/edit/CourseEditDialog.kt:53:37 Unresolved reference 'verticalScroll'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/edit/CourseEditDialog.kt:53:52 Unresolved reference 'rememberScrollState'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/edit/CourseEditDialog.kt:63:47 Unresolved reference 'rememberScrollState'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/LoginWebView.kt:31:17 Unresolved reference 'CookieManager'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/LoginWebView.kt:32:17 Unresolved reference 'CookieManager'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/LoginWebView.kt:39:29 Unresolved reference 'CookieManager'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/LoginWebView.kt:46:25 Unresolved reference 'CookieManager'.
-e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/settings/SettingsScreen.kt:153:62 Unresolved reference 'width'.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run-1790422827228.json
+e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/ImportViewModel.kt:160:26 No parameter with name 'app' found.
+e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/ImportViewModel.kt:160:32 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///home/runner/work/XMU-schedule/XMU-schedule/app/src/main/java/com/zako/xmuschedule/ui/importing/ImportViewModel.kt:160:66 No value passed for parameter 'context'.
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run-1790477887987.json
 
 FAILURE: Build failed with an exception.
 
@@ -73,5 +58,5 @@ Execution failed for task ':app:compileDebugKotlin'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 39s
+BUILD FAILED in 38s
 30 actionable tasks: 30 executed
